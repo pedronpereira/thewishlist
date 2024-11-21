@@ -1,0 +1,106 @@
+.wishlist-header {
+  display: flex;
+}
+
+.wishlist-header-avatar {
+  width: 7% !important;
+  height: 7% !important;
+  border-radius: 50% !important;
+  box-shadow: 0 0 0 1px var(--avatar-borderColor);
+  display: inline-block;
+  flex-shrink: 0;
+  line-height: 1;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-right: 10px;
+}
+
+.wish-item-false {
+  display: flex;
+  max-width: 40rem;
+  align-items: flex-start;
+  margin: 1rem;
+  border-radius: 0.5rem;
+  background-color: rgb(237, 205, 100);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.wish-item-true {
+  display: flex;
+  max-width: 40rem;
+  align-items: flex-start;
+  margin: 1rem;
+  border-radius: 0.5rem;
+  background-color: rgb(66, 74, 73);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.wish-item-true a{
+  display: none;
+  cursor: not-allowed;
+  opacity: 0.5;
+  text-decoration: none;
+  pointer-events: none;
+}
+
+.wish-item-logo-wrapper {
+  flex-shrink: 1;
+}
+
+.wish-item-logo {
+  border-radius: 0.25rem;
+  max-width: 200px;
+}
+
+.wish-item-summary {
+  display: block;
+  text-align: left;
+  margin-block: 2.5%;
+  width: 100%;
+}
+
+.wish-item-text {
+  margin-left: 1rem;
+  margin-right: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.wish-item-title {
+  margin-top: 0;
+  margin-bottom: 5px;
+  order: 0;
+  text-align: center;
+  line-height: 1em;
+  font-size: 36px;
+  color: white;
+  font-weight: 800;
+  font-family: "Clarkson", Helvetica, sans-serif;
+}
+
+.wish-item-description {
+  order: 1;
+  font-size: 18px;
+  font-weight: 500;
+  font-family: "Clarkson", Helvetica, sans-serif;
+  line-height: 1.2em;
+}
+
+.wish-item-link {
+  order: 10;
+  align-self: center;
+  font-size: 14px;
+  font-family: "Clarkson", Helvetica, sans-serif;
+}
+
+.wish-item-link:hover {
+  order: 10;
+  color: crimson;
+  font-weight: bold;
+  font-size: 14px;
+  font-family: "Clarkson", Helvetica, sans-serif;
+}
+
+.wish-item-bought {
+  background-color: rgb(237, 205, 100);
+}

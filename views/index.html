@@ -1,0 +1,49 @@
+{{ block "index" . }}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pedro's Wishlist</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+        <link rel="stylesheet" href="../css/index.css" type="text/css" />
+
+    </head>
+    <body>
+        <div>
+            <div class="wishlist-header">
+                <img class="wishlist-header-avatar" src="https://avatars.githubusercontent.com/u/6302574?v=4"/>
+                <div style="flex-direction: column;">
+                    <h1>Ola! Bem vindo ha minha wishlist!</h1>
+                    <p>Os items nos retangulos cinzentos ja foram comprados.</p>    
+                    <p>Carrega nos links se quiseres ver a loja os podes comprar.</p>    
+                </div>
+            </div>
+            <hr/>
+            {{ template "tshirts" .Tshirts}}
+            <hr />
+            <h4>That's All folks!</h4>
+        </div>
+    </body>
+</html>
+
+{{ end }}
+
+{{ block "tshirts" . }}
+
+    {{ range . }}
+        <div class="wish-item-{{ .WasPurchased }}">
+            <div class="wish-item-logo-wrapper">
+                <img class="wish-item-logo" src="{{ .ImgSource }}"/>
+            </div>
+            <div class="wish-item-summary">
+                <div class="wish-item-text">
+                    <div class="wish-item-title">{{ .Title }}</div>
+                    <p class="wish-item-description">{{ .Description }}</p>
+                    <a class="wish-item-link" href="{{ .ShopUrl }}" target="_blank">website link</a>
+                </div>
+            </div>            
+        </div>
+    {{ end }}
+{{ end }}
