@@ -13,10 +13,39 @@ import (
 )
 
 type Wishlist struct {
-	Count     int
-	Tshirts   []WishItem
-	Books     []WishItem
-	MouseMats []WishItem
+	Count   int
+	Tshirts []WishItem
+	Books   []WishItem
+	Other   []WishItem
+}
+
+// Searches all items for the purchased item and returns the updated item
+func (w *Wishlist) ItemPurchased(id string) *WishItem {
+	for i, wishitem := range w.Other {
+		if wishitem.Id == id {
+			wishitem.WasPurchased = !wishitem.WasPurchased
+			w.Other[i] = wishitem
+			return &wishitem
+		}
+	}
+
+	for i, wishitem := range w.Books {
+		if wishitem.Id == id {
+			wishitem.WasPurchased = !wishitem.WasPurchased
+			w.Books[i] = wishitem
+			return &wishitem
+		}
+	}
+
+	for i, wishitem := range w.Tshirts {
+		if wishitem.Id == id {
+			wishitem.WasPurchased = !wishitem.WasPurchased
+			w.Tshirts[i] = wishitem
+			return &wishitem
+		}
+	}
+
+	return nil
 }
 
 type WishItem struct {
@@ -67,9 +96,23 @@ func main() {
 		return c.JSON(http.StatusOK, payload)
 	})
 
+	e.POST("/wishitem/:id", func(c echo.Context) error {
+		id := c.Param("id")
+
+		wishitem := payload.ItemPurchased(id)
+		if wishitem == nil {
+			erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
+			fmt.Println(erroMsg)
+			c.String(404, erroMsg)
+		}
+
+		return c.Render(http.StatusOK, "wishlistitem", wishitem)
+	})
+
 	e.GET("/", func(c echo.Context) error {
 		return c.Render(http.StatusOK, "index", payload)
 	})
+
 	e.Logger.Fatal(e.Start(":43067"))
 
 	//TODO:

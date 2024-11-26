@@ -21,7 +21,11 @@
                 </div>
             </div>
             <hr/>
-            {{ template "tshirts" .Tshirts}}
+            {{ template "itemlist" .Tshirts}}
+            <hr/>
+            {{ template "itemlist" .Books}}
+            <hr />
+            {{ template "itemlist" .Other}}
             <hr />
             <h4>That's All folks!</h4>
         </div>
@@ -30,20 +34,52 @@
 
 {{ end }}
 
-{{ block "tshirts" . }}
+{{ block "itemlist" . }}
 
-    {{ range . }}
-        <div class="wish-item-{{ .WasPurchased }}">
-            <div class="wish-item-logo-wrapper">
-                <img class="wish-item-logo" src="{{ .ImgSource }}"/>
-            </div>
+    {{ range $element := . }}
+        
+        {{ template "wishlistitem" $element }}
+        
+    {{ end }}
+{{ end }}
+
+{{ block "wishlistitem" . }}
+    <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}">
+        <div class="wish-item-logo-wrapper">
+            <img class="wish-item-logo" src="{{ .ImgSource }}"/>
+        </div>
+        <div class="wish-item-content">
             <div class="wish-item-summary">
                 <div class="wish-item-text">
-                    <div class="wish-item-title">{{ .Title }}</div>
+                    <p class="wish-item-title">{{ .Title }}</p>
                     <p class="wish-item-description">{{ .Description }}</p>
-                    <a class="wish-item-link" href="{{ .ShopUrl }}" target="_blank">website link</a>
                 </div>
-            </div>            
+            </div>
+
+            {{ if .WasPurchased }} 
+            <p class="wish-item-msg-bought">This item was already purchased!</p>
+            {{ else }}
+            <div class="wish-items-ops">
+                <a class="wish-item-link" href="{{ .ShopUrl }}" target="_blank">Open Site</a>
+                <button
+                class="ops-btn-buy"
+                type="button"
+                hx-target="#wishitem-{{ .Id }}"
+                hx-swap="outerHTML, swap:1000ms"
+                hx-post="/wishitem/{{ .Id }}">Comprei</button>
+            </div>
+            {{ end }}
         </div>
-    {{ end }}
+    </div>
+{{ end }}
+
+{{ block "filters" . }}
+    <div>
+        <label>Filtro:</label>
+        <select>
+            {{ range .}}
+                <option value="{{ . }}">{{ . }}</option>
+            {{ end }}   
+        </select>
+    </div>
 {{ end }}

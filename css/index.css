@@ -44,7 +44,7 @@
 }
 
 .wish-item-logo-wrapper {
-  flex-shrink: 1;
+  flex-shrink: 0;
 }
 
 .wish-item-logo {
@@ -53,15 +53,15 @@
 }
 
 .wish-item-summary {
-  display: block;
-  text-align: left;
-  margin-block: 2.5%;
+  display: grid;
+  flex-grow: 8;
+  order: 0;
   width: 100%;
 }
 
 .wish-item-text {
   margin-left: 1rem;
-  margin-right: auto;
+  margin-right: 1rem;
   display: flex;
   flex-direction: column;
 }
@@ -74,6 +74,23 @@
   line-height: 1em;
   font-size: 36px;
   color: white;
+  width: 100%;
+  display: block;
+  font-weight: 800;
+  font-family: "Clarkson", Helvetica, sans-serif;
+}
+
+.wish-item-msg-bought {
+  margin-top: 0;
+  margin-bottom: 5px;
+  padding: 5px;
+  order: 0;
+  text-align: center;
+  line-height: 1em;
+  font-size: 20px;
+  color: red;
+  background-color: rgb(237, 205, 100);
+  display: block;
   font-weight: 800;
   font-family: "Clarkson", Helvetica, sans-serif;
 }
@@ -86,21 +103,94 @@
   line-height: 1.2em;
 }
 
-.wish-item-link {
-  order: 10;
+.wish-item-bought {
+  background-color: rgb(237, 205, 100);
+}
+
+.wish-item-content {
+  display: flex;
+  height: 100%;
+  flex-flow: column;
+  flex-grow: 8;
+}
+
+.wish-items-ops-true {
+  display: grid;
+  height: 25%;
+  vertical-align: bottom;
+  flex: 1;
+  order: 1;
+}
+
+.wish-items-ops {
+  display: grid;
+  flex-direction: row ;
+  height: 25%;
+  vertical-align: bottom;
+  flex: 1;
+  order: 1;
+}
+
+/* .wish-item-link {
+  order: 0;
+  color: crimson;
+  font-weight: bold;
   align-self: center;
   font-size: 14px;
   font-family: "Clarkson", Helvetica, sans-serif;
-}
+} */
 
 .wish-item-link:hover {
-  order: 10;
+  order: 0;
+  width: 130px;
+  border: none;
+  border-radius: 0.5rem;
   color: crimson;
-  font-weight: bold;
+  background-color: white;
+  padding: 10px 25px;
+  text-align: center;
+  text-decoration: none;
   font-size: 14px;
+  font-weight: bold;
   font-family: "Clarkson", Helvetica, sans-serif;
+  margin: 4px 2px;
+  cursor: pointer;
 }
 
-.wish-item-bought {
-  background-color: rgb(237, 205, 100);
+.wish-item-link {
+  order: 0;
+  width: 130px;
+  border: none;
+  border-radius: 0.5rem;
+  color: crimson;
+  background-color: white;
+  padding: 10px 25px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: "Clarkson", Helvetica, sans-serif;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.ops-btn-buy {
+  order: 1;
+  width: 130px;
+  border: none;
+  border-radius: 0.5rem;
+  color: crimson;
+  padding: 10px 25px;
+  text-align: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: "Clarkson", Helvetica, sans-serif;
+  margin: 4px 2px;
+  cursor: pointer;
+}
+
+.ops-btn-buy:hover{
+  background-color: whitesmoke;
+  text-decoration: underline;
 }
