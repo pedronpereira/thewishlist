@@ -9,6 +9,11 @@ on:
       - main
   workflow_dispatch:
 
+env:
+  AZURE_WEBAPP_NAME: thewishilist
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  GO_VERSION: '>=1.23.0'
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -19,16 +24,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v4
         with:
-          go-version: '>=1.23.0'
+          go-version: ${{env.GO_VERSION}}
 
       - name: Build
-        run: go build -v -o ${{env.DOTNET_ROOT}}/build/main ./cmd/main.go
+        run: go build -v -o ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build/main ./cmd/main.go
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: thewishlist
-          path: ${{env.DOTNET_ROOT}}/build
+          name: ${{env.AZURE_WEBAPP_NAME}}
+          path: ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build
 
   deploy:
     runs-on: ubuntu-latest
@@ -43,7 +48,7 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: thewishlist
+          name: ${{env.AZURE_WEBAPP_NAME}}
       
       - name: Login to Azure
         uses: azure/login@v2
@@ -58,5 +63,9 @@ jobs:
         with:
           app-name: 'penu-thewishlist'
           slot-name: 'Production'
-          package: .
+          package: ${{env.AZURE_WEBAPP_PACKAGE_PATH}}
+
+      - name: logout
+        run: |
+          az logout
           
