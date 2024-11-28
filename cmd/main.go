@@ -113,7 +113,16 @@ func main() {
 		return c.Render(http.StatusOK, "index", payload)
 	})
 
-	e.Logger.Fatal(e.Start(":43067"))
+	port := os.Getenv("SERVER_PORT")
+	if port == "" {
+		port = os.Getenv("WEBSITES_PORT")
+	}
+
+	if port == "" {
+		port = "43067"
+	}
+
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
 
 	//TODO:
 }
