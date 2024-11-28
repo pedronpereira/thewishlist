@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - penu-thewishlist
+name: TEST - Build and deploy to Azure penu-thewishlist
 
 on:
   push:
@@ -22,7 +22,7 @@ jobs:
           go-version: '1.20'
 
       - name: Build
-        run: go build -o ${{env.DOTNET_ROOT}}/build/main ./cmd/main.go -v
+        run: go build -v -o ${{env.DOTNET_ROOT}}/build/main ./cmd/main.go
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
