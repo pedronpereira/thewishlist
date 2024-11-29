@@ -12,16 +12,12 @@ env:
   AZURE_WEBAPP_NAME: thewishilist
   AZURE_WEBAPP_PACKAGE_PATH: '.'
   GO_VERSION: '>=1.23.0'
-
+permissions:
+      id-token: write
 jobs:
   build:
     runs-on: windows-latest
-    environment:
-      name: 'Production'
-      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
-
+    
     steps:
       - uses: actions/checkout@v4
 
