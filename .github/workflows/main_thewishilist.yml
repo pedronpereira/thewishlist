@@ -1,13 +1,18 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - thewishilist
+name: TEST - Build and deploy to Azure penu-thewishlist
 
 on:
   push:
     branches:
       - main
   workflow_dispatch:
+
+env:
+  AZURE_WEBAPP_NAME: thewishilist
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  GO_VERSION: '>=1.23.0'
 
 jobs:
   build:
@@ -16,25 +21,31 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up .NET Core
-        uses: actions/setup-dotnet@v4
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
-          dotnet-version: '6.0.x'
+          go-version: ${{env.GO_VERSION}}
 
-      - name: Build with dotnet
-        run: dotnet build --configuration Release
+      - name: Copy static CSS files
+        run: xcopy /i css build\css
 
-      - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+      - name: Copy static views
+        run: xcopy /i views build\views
+
+      - name: Copy static resource files
+        run: xcopy /i resources build\resources
+
+      - name: Build
+        run: go build -v -o ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build/main.exe ./cmd/main.go
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
-          name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          name: ${{env.AZURE_WEBAPP_NAME}}
+          path: ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build
 
   deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     needs: build
     environment:
       name: 'Production'
@@ -46,20 +57,23 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: .net-app
+          name: ${{env.AZURE_WEBAPP_NAME}}
       
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_FFA559B09D424680BE97DE110E672583 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_6AA126CBA80D44F3B3FB55ECA2AFB5C1 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6A250090CA064FC6B9B26763CCDE7D3B }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_80AB6143B88644EEAB739EEEAF84781D }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_5422553DE5944AE39D6A0A9A890D9702 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_22DC596C4A734012A424B80484B64946 }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'thewishilist'
-          slot-name: 'Production'
-          package: .
+          app-name: ${{env.AZURE_WEBAPP_NAME}}
+          package: ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build/
+
+      - name: logout
+        run: |
+          az logout
           
