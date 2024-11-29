@@ -35,7 +35,7 @@ jobs:
         run: xcopy /i resources build\resources
 
       - name: Build
-        run: go build -v -o ${{env.AZURE_WEBAPP_PACKAGE_PATH}}/build/main.exe ./cmd/main.go
+        run: go build -v -o build/main.exe cmd/main.go
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
