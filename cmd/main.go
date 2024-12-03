@@ -81,7 +81,7 @@ func main() {
 	e.Renderer = newTemplate()
 
 	//load the file
-	data, err := os.ReadFile("./resources/wishlist.json")
+	data, err := os.ReadFile("./data/wishlist.json")
 	if err != nil {
 		fmt.Printf("ERROR %s: %v", "Reading file", err)
 	}
@@ -113,7 +113,7 @@ func main() {
 		return c.Render(http.StatusOK, "index", payload)
 	})
 
-	port := os.Getenv("SERVER_PORT")
+	port := os.Getenv("PORT")
 	if port == "" {
 		port = os.Getenv("WEBSITES_PORT")
 	}
@@ -123,6 +123,4 @@ func main() {
 	}
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
-
-	//TODO:
 }
