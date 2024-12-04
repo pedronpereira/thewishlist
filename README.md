@@ -1,4 +1,6 @@
-# The Gift List
+<h1 style="text-align:center">The Gift List</h1>
+
+![build status](https://github.com/pedronpereira/thewishlist/actions/workflows/main_thewishilist.yml/badge.svg)
 
 This small repository contains a simple website that shows a list of presents for friends and family to buy!
 
