@@ -1,0 +1,35 @@
+# Reusable Workflow that builds the whole project
+
+name: Build
+
+on:
+    workflow_call:
+
+env:
+  AZURE_WEBAPP_NAME: thewishilist
+  AZURE_WEBAPP_PACKAGE_PATH: '.'
+  GO_VERSION: '>=1.23.0'
+
+jobs:
+    build:
+        runs-on: windows-latest
+        
+        steps:
+            - uses: actions/checkout@v4
+      
+            - name: Set up Go
+              uses: actions/setup-go@v4
+              with:
+                go-version: ${{env.GO_VERSION}}
+      
+            - name: Copy static CSS files
+              run: xcopy /i css build\css
+      
+            - name: Copy static views
+              run: xcopy /i views build\views
+      
+            - name: Copy static resource files
+              run: xcopy /i resources build\resources
+      
+            - name: Build
+              run: go build -v -o build/go-app.exe cmd/main.go

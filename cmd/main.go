@@ -48,15 +48,53 @@ func (w *Wishlist) ItemPurchased(id string) *WishItem {
 	return nil
 }
 
+func (w *Wishlist) UpdateItem(requestItem WishItem) error {
+	if requestItem.Id == "" {
+		return fmt.Errorf("item has no id")
+	}
+
+	if requestItem.ItemType == "" {
+		return fmt.Errorf("item has no type")
+	}
+
+	if requestItem.ItemType == "t-shirt" {
+		for i, wishitem := range w.Tshirts {
+			if wishitem.Id == requestItem.Id {
+				w.Tshirts[i] = requestItem
+				break
+			}
+		}
+	}
+
+	if requestItem.ItemType == "book" {
+		for i, wishitem := range w.Books {
+			if wishitem.Id == requestItem.Id {
+				w.Books[i] = requestItem
+				break
+			}
+		}
+	}
+
+	if requestItem.ItemType == "mouse-mat" {
+		for i, wishitem := range w.Other {
+			if wishitem.Id == requestItem.Id {
+				w.Other[i] = requestItem
+				break
+			}
+		}
+	}
+	return nil
+}
+
 type WishItem struct {
-	Id           string
-	Name         string
-	Title        string
-	Description  string
-	ItemType     string
-	ShopUrl      string
-	WasPurchased bool
-	ImgSource    string
+	Id           string `json:"id"`
+	Name         string `json:"name"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	ItemType     string `json:"itemtype"`
+	ShopUrl      string `json:"shopurl"`
+	WasPurchased bool   `json:"waspurchased"`
+	ImgSource    string `json:"imgsource"`
 }
 
 type Templates struct {
@@ -92,11 +130,24 @@ func main() {
 		fmt.Printf("ERROR %s: %v", "Parsing json", err)
 	}
 	e.GET("/wishlist", func(c echo.Context) error {
-		// return c.String(http.StatusOK, "wishlist will be here!")
 		return c.JSON(http.StatusOK, payload)
 	})
 
-	e.POST("/wishitem/:id", func(c echo.Context) error {
+	//replace the whole wishlist
+	e.POST("/wishlist", func(c echo.Context) error {
+		requestWishList := new(Wishlist)
+		if err := c.Bind(requestWishList); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		//TODO: test if the website can access again this list or if its gone form memory.
+		payload = *requestWishList
+
+		return c.JSON(http.StatusOK, requestWishList)
+	})
+
+	//marks the item as purchased
+	e.POST("/wishitem/:id/buy", func(c echo.Context) error {
 		id := c.Param("id")
 
 		wishitem := payload.ItemPurchased(id)
@@ -107,6 +158,20 @@ func main() {
 		}
 
 		return c.Render(http.StatusOK, "wishlistitem", wishitem)
+	})
+
+	e.POST("/wishitem", func(c echo.Context) error {
+		var requestItem WishItem
+		if err := c.Bind(&requestItem); err != nil {
+			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		}
+
+		err = payload.UpdateItem(requestItem)
+		if err != nil {
+			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+		}
+
+		return c.JSON(http.StatusOK, requestItem)
 	})
 
 	e.GET("/", func(c echo.Context) error {
