@@ -1,0 +1,220 @@
+/* ----------------------------- VARIABLES ----------------------------- */
+
+:root {
+    --main-bg-color: #f1f2f6;
+    --card-bg-color-available: #EDCD64;
+    --card-bg-color-purchased: #f1f2f6;
+
+    --button-bg-color: #ffffff;
+    --button-bg-color-hover: #ffffff;
+
+    --text-main: #171820;
+    --text-button-active: #e44222;
+
+    --divider-color: #d8d8d8;
+
+    --shadow-default: rgba(47, 118, 96, 0.25) 0rem 0rem 2.4rem;
+    --shadow-minimal: rgba(74, 77, 94, 0.25) 0rem 0rem 0.2rem;
+    --shadow-highlighted: rgba(237, 205, 100, 0.804) 0rem 0rem 2.4rem;
+}
+
+
+/* ----------------------------- DEFAULTS RESET ----------------------------- */
+/*   Font size initial set made 62.5% to ensure 1rem = 10px for ease of use   */
+
+html {
+    box-sizing: border-box;
+    font-size: 62.5%;
+    scroll-behavior: smooth;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: var(--main-bg-color);
+}
+
+*, *:before, *:after {
+    box-sizing: inherit;
+    font-family: "Clarkson", Helvetica, sans-serif;
+}
+
+body, h1, h2, h3, h4, h5, h6, p, ol, ul, figure, a {
+    margin: 0;
+    padding: 0;
+    font-weight: 400;
+    line-height: 130%;
+    color: var(--text-main);
+}
+
+ol, ul {
+    list-style: none;
+}
+
+
+/* ----------------------------- TYPOGRAPHY ----------------------------- */
+
+h1 {
+    font-size: 2.6rem;
+    font-weight: 700;
+}
+
+h4 {
+    font-size: 2rem;
+    font-weight: 700;
+    width: 100%;
+    text-align: center;
+    padding-bottom: 3.8rem;
+}
+
+p {
+    font-size: 2rem;
+}
+
+a, button {
+    font-size: 2rem;
+    font-weight: 700;
+    padding: 1rem 2.4rem;
+    border: none;
+    border-radius: 99rem;
+    text-decoration: none;
+    cursor: pointer;
+    background-color: var(--button-bg-color);
+    transition: cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s;
+}
+a:hover, button:hover {
+    background-color: var(--button-bg-color-hover);
+    outline: 2px solid var(--button-bg-color);
+    color: var(--text-button-active);
+}
+
+.wish-item-title {
+    font-size: 2.4rem;
+    font-weight: 800;
+}
+
+.wish-item-description {
+    font-weight: 500;
+}
+
+.wish-item-msg-bought {
+    width: 100%;
+    padding: 1rem;
+    text-align: center;
+    box-shadow: var(--shadow-default);
+    border-radius: 99rem;
+}
+
+
+/* ------------------------------- LAYOUTS ------------------------------- */
+
+div {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 64rem;
+}
+
+.wishlist-cards-container {
+    padding: 0rem 2.6rem;
+}
+
+.wishlist-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem;
+    padding: 0rem 2rem;
+    padding-top: 3.8rem;
+}
+
+.wish-item-false, .wish-item-true {
+    flex-direction: row;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-default);
+    padding: 1.6rem;
+    margin-bottom: 2rem;
+    transition: cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.5s;
+}
+
+.wish-item-false {
+    background-color: var(--card-bg-color-available);
+}
+
+.wish-item-true {
+    background-color: var(--card-bg-color-purchased);
+    box-shadow: var(--shadow-minimal);
+}
+
+.wish-item-false:hover {
+    box-shadow: var(--shadow-highlighted);
+}
+
+.wish-item-true:hover {
+    cursor: not-allowed;
+}
+
+.wish-item-content {
+    padding: 1rem 2rem 2rem 2rem;
+    gap: 1.6rem;
+    justify-content: space-between;
+}
+
+.wish-item-text {
+    gap: 0.8rem;
+}
+
+.wish-items-ops {
+    flex-direction: row;
+    gap: 1.2rem;
+}
+
+
+/* ----------------------------- ELEMENTS ----------------------------- */
+
+img {
+    width: 100%;
+    max-width: 15rem;
+    border-radius: 1rem;
+    object-fit: cover;
+}
+
+.wishlist-header-avatar {
+    border-radius: 50%;
+    box-shadow: var(--shadow-default);
+    vertical-align: middle;
+    max-width: 20%;
+}
+
+hr {
+    width: 100%;
+    height: 0.2rem;
+    border: none;
+    background-color: var(--divider-color);
+    margin: 3.2rem 0;
+}
+
+
+/* ----------------------------- MEDIA QUERIES ----------------------------- */
+@media screen and (max-width: 560px) {
+    .wishlist-header {
+        flex-direction: column;
+        gap: 2rem;
+    }
+
+    .wish-item-false, .wish-item-true {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    img {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .wish-items-ops {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}

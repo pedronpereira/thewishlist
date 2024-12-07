@@ -7,14 +7,15 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
-        <link rel="stylesheet" href="../css/index.css" type="text/css" />
+        <link rel="stylesheet" href="../css/index-v1.css" type="text/css" />
 
     </head>
     <body>
-        <div>
+        <!-- Here style for the container -->
+        <div class="wishlist-cards-container">
             <div class="wishlist-header">
                 <img class="wishlist-header-avatar" src="https://avatars.githubusercontent.com/u/6302574?v=4"/>
-                <div style="flex-direction: column;">
+                <div>
                     <h1>Ola! Bem vindo ha minha wishlist!</h1>
                     <p>Os items nos retangulos cinzentos ja foram comprados.</p>    
                     <p>Carrega nos links se quiseres ver a loja os podes comprar.</p>    
@@ -27,7 +28,7 @@
             <hr />
             {{ template "itemlist" .Other}}
             <hr />
-            <h4>That's All folks!</h4>
+            <h4>That's All folks! &#128123</h4>
         </div>
     </body>
 </html>
@@ -45,15 +46,11 @@
 
 {{ block "wishlistitem" . }}
     <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}">
-        <div class="wish-item-logo-wrapper">
-            <img class="wish-item-logo" src="{{ .ImgSource }}"/>
-        </div>
+        <img src="{{ .ImgSource }}"/>
         <div class="wish-item-content">
-            <div class="wish-item-summary">
-                <div class="wish-item-text">
-                    <p class="wish-item-title">{{ .Title }}</p>
-                    <p class="wish-item-description">{{ .Description }}</p>
-                </div>
+            <div class="wish-item-text">
+                <p class="wish-item-title">{{ .Title }}</p>
+                <p class="wish-item-description">{{ .Description }}</p>
             </div>
 
             {{ if .WasPurchased }} 
