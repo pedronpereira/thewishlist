@@ -7,6 +7,7 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+        <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
         <link rel="stylesheet" href="../css/index-v1.css" type="text/css" />
 
     </head>
@@ -22,11 +23,11 @@
                 </div>
             </div>
             <hr/>
-            {{ template "itemlist" .Tshirts}}
+            {{ template "tshirtList" .Tshirts}}
             <hr/>
-            {{ template "itemlist" .Books}}
+            {{ template "booksList" .Books}}
             <hr />
-            {{ template "itemlist" .Other}}
+            {{ template "othersList" .Other}}
             <hr />
             <h4>That's All folks! &#128123</h4>
         </div>
@@ -34,6 +35,10 @@
 </html>
 
 {{ end }}
+
+{{ block "tshirtList" . }} {{ template "itemlist" . }} {{ end }}
+{{ block "booksList" . }} {{ template "itemlist" . }} {{ end }}
+{{ block "othersList" . }} {{ template "itemlist" . }} {{ end }}
 
 {{ block "itemlist" . }}
 
@@ -45,7 +50,7 @@
 {{ end }}
 
 {{ block "wishlistitem" . }}
-    <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}">
+    <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}" hx-ext="morph">
         <img src="{{ .ImgSource }}"/>
         <div class="wish-item-content">
             <div class="wish-item-text">
@@ -62,7 +67,7 @@
                 class="ops-btn-buy"
                 type="button"
                 hx-target="#wishitem-{{ .Id }}"
-                hx-swap="outerHTML, swap:1000ms"
+                hx-swap="morph:outerHTML"
                 hx-post="/wishitem/{{ .Id }}/buy">Comprei</button>
             </div>
             {{ end }}

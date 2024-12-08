@@ -48,20 +48,20 @@ func (w *Wishlist) ItemPurchased(id string) *WishItem {
 	return nil
 }
 
-func (w *Wishlist) UpdateItem(requestItem WishItem) error {
+func (w *Wishlist) UpdateItem(requestItem WishItem) (string, error) {
 	if requestItem.Id == "" {
-		return fmt.Errorf("item has no id")
+		return "", fmt.Errorf("item has no id")
 	}
 
 	if requestItem.ItemType == "" {
-		return fmt.Errorf("item has no type")
+		return "", fmt.Errorf("item has no type")
 	}
 
 	if requestItem.ItemType == "t-shirt" {
 		for i, wishitem := range w.Tshirts {
 			if wishitem.Id == requestItem.Id {
 				w.Tshirts[i] = requestItem
-				break
+				return requestItem.ItemType, nil
 			}
 		}
 	}
@@ -70,7 +70,7 @@ func (w *Wishlist) UpdateItem(requestItem WishItem) error {
 		for i, wishitem := range w.Books {
 			if wishitem.Id == requestItem.Id {
 				w.Books[i] = requestItem
-				break
+				return requestItem.ItemType, nil
 			}
 		}
 	}
@@ -79,11 +79,12 @@ func (w *Wishlist) UpdateItem(requestItem WishItem) error {
 		for i, wishitem := range w.Other {
 			if wishitem.Id == requestItem.Id {
 				w.Other[i] = requestItem
-				break
+				return requestItem.ItemType, nil
 			}
 		}
 	}
-	return nil
+
+	return "", fmt.Errorf("item not found")
 }
 
 type WishItem struct {
@@ -140,7 +141,6 @@ func main() {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		//TODO: test if the website can access again this list or if its gone form memory.
 		payload = *requestWishList
 
 		return c.JSON(http.StatusOK, requestWishList)
@@ -157,16 +157,17 @@ func main() {
 			c.String(404, erroMsg)
 		}
 
-		return c.Render(http.StatusOK, "wishlistitem", wishitem)
+		return c.Render(200, "wishlistitem", wishitem)
 	})
 
+	//update item
 	e.POST("/wishitem", func(c echo.Context) error {
 		var requestItem WishItem
 		if err := c.Bind(&requestItem); err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 		}
 
-		err = payload.UpdateItem(requestItem)
+		_, err = payload.UpdateItem(requestItem)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 		}
@@ -188,4 +189,15 @@ func main() {
 	}
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
+}
+
+func buildUpdateItemResponse(wishList Wishlist, itemType string) (int, string, interface{}) {
+	switch itemType {
+	case "t-shirt":
+		return 200, "tshirtList", wishList.Tshirts
+	case "book":
+		return 200, "booksList", wishList.Books
+	default:
+		return 200, "othersList", wishList.Other
+	}
 }
