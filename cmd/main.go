@@ -113,6 +113,7 @@ func newTemplate() *Templates {
 }
 
 func main() {
+	dataPath := "./data/wishlist.json"
 	e := echo.New()
 	e.Use(middleware.Logger())
 
@@ -120,7 +121,7 @@ func main() {
 	e.Renderer = newTemplate()
 
 	//load the file
-	data, err := os.ReadFile("./data/wishlist.json")
+	data, err := os.ReadFile(dataPath)
 	if err != nil {
 		fmt.Printf("ERROR %s: %v", "Reading file", err)
 	}
@@ -142,6 +143,19 @@ func main() {
 		}
 
 		payload = *requestWishList
+		buf, err := json.Marshal(payload)
+		if err != nil {
+			erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
+			fmt.Println(erroMsg)
+			c.String(500, erroMsg)
+		}
+
+		err = os.WriteFile(dataPath, buf, 0644)
+		if err != nil {
+			erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
+			fmt.Println(erroMsg)
+			c.String(500, erroMsg)
+		}
 
 		return c.JSON(http.StatusOK, requestWishList)
 	})
@@ -155,6 +169,29 @@ func main() {
 			erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
 			fmt.Println(erroMsg)
 			c.String(404, erroMsg)
+		}
+
+		buf, err := json.Marshal(payload)
+		if err != nil {
+			erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
+			wishitem.WasPurchased = !wishitem.WasPurchased
+
+			_, err = payload.UpdateItem(*wishitem)
+			if err != nil {
+				erroMsg = fmt.Sprintf("ERROR Trying to update item AFTER marshalling %s", err)
+				fmt.Println(erroMsg)
+				return c.String(500, erroMsg)
+			}
+
+			fmt.Println(erroMsg)
+			c.String(500, erroMsg)
+		}
+
+		err = os.WriteFile(dataPath, buf, 0644)
+		if err != nil {
+			erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
+			fmt.Println(erroMsg)
+			c.String(500, erroMsg)
 		}
 
 		return c.Render(200, "wishlistitem", wishitem)
@@ -189,15 +226,4 @@ func main() {
 	}
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
-}
-
-func buildUpdateItemResponse(wishList Wishlist, itemType string) (int, string, interface{}) {
-	switch itemType {
-	case "t-shirt":
-		return 200, "tshirtList", wishList.Tshirts
-	case "book":
-		return 200, "booksList", wishList.Books
-	default:
-		return 200, "othersList", wishList.Other
-	}
 }
