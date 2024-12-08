@@ -134,7 +134,7 @@
     ],
     "books": [
         {
-            "id": "87614112-3549-40c6-0010-ea7a8b1de6fd",
+            "id": "87614112-3549-40c6-0123-ea7a8b1de6fd",
             "name": "dinotopiajourneytochandara",
             "title": "Dinotopia: Journey to Chandara",
             "description": "Dinotopia: Journey to Chandara",
@@ -144,7 +144,7 @@
             "imgSource": "https://m.media-amazon.com/images/I/81JYErMAgZL._SY466_.jpg"
         },
         {
-            "id": "87614112-3549-40c6-0010-ea7a8b1de6fd",
+            "id": "87614112-3549-40c6-3212-ea7a8b1de6fd",
             "name": "dinotopiatheworldbeneath",
             "title": "Dinotopia The World Beneath",
             "description": "Dinotopia The World Beneath",
@@ -154,12 +154,12 @@
             "imgSource": "https://m.media-amazon.com/images/I/81wXI6nmhnL._SY466_.jpg"
         },
         {
-            "id": "87614112-3549-40c6-0010-ea7a8b1de6fd",
+            "id": "87614112-3549-40c6-4131-ea7a8b1de6fd",
             "name": "principlesforachangingworldorder",
             "title": "Principles for a Changing World Order",
             "description": "Livro do Ray Dalio para coleccao.",
             "itemType": "book",
-            "shopUrl": "https://amzn.eu/d/hc34Jno",
+            "shopUrl": "https://www.amazon.co.uk/dp/1471196690",
             "wasPurchased": false,
             "imgSource": "https://m.media-amazon.com/images/I/61b6uC-m2OL._SY522_.jpg"
         }
