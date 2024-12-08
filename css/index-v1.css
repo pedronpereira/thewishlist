@@ -1,7 +1,7 @@
 /* ----------------------------- VARIABLES ----------------------------- */
 
 :root {
-    --main-bg-color: #f1f2f6;
+    --main-bg-color: #FFFAF0;
     --card-bg-color-available: #EDCD64;
     --card-bg-color-purchased: #f1f2f6;
 
@@ -156,7 +156,7 @@ div {
 }
 
 .wish-item-content {
-    padding: 1rem 2rem 2rem 2rem;
+    padding: 2rem;
     gap: 1.6rem;
     justify-content: space-between;
 }
