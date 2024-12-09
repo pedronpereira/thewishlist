@@ -112,109 +112,31 @@ func newTemplate() *Templates {
 	}
 }
 
+var payload Wishlist
+
+const dataPath = "./data/wishlist.json"
+
 func main() {
-	dataPath := "./data/wishlist.json"
 	e := echo.New()
 	e.Use(middleware.Logger())
 
 	e.Static("/css", "css")
 	e.Renderer = newTemplate()
 
-	//load the file
-	data, err := os.ReadFile(dataPath)
-	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Reading file", err)
-	}
+	initWishList()
 
-	var payload Wishlist
-	err = json.Unmarshal(data, &payload)
-	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Parsing json", err)
-	}
-	e.GET("/wishlist", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, payload)
-	})
+	e.GET("/wishlist", getFullWishList)
 
 	//replace the whole wishlist
-	e.POST("/wishlist", func(c echo.Context) error {
-		requestWishList := new(Wishlist)
-		if err := c.Bind(requestWishList); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
-
-		payload = *requestWishList
-		buf, err := json.Marshal(payload)
-		if err != nil {
-			erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
-			fmt.Println(erroMsg)
-			c.String(500, erroMsg)
-		}
-
-		err = os.WriteFile(dataPath, buf, 0644)
-		if err != nil {
-			erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
-			fmt.Println(erroMsg)
-			c.String(500, erroMsg)
-		}
-
-		return c.JSON(http.StatusOK, requestWishList)
-	})
+	e.POST("/wishlist", replaceCompleteWishList)
 
 	//marks the item as purchased
-	e.POST("/wishitem/:id/buy", func(c echo.Context) error {
-		id := c.Param("id")
-
-		wishitem := payload.ItemPurchased(id)
-		if wishitem == nil {
-			erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
-			fmt.Println(erroMsg)
-			c.String(404, erroMsg)
-		}
-
-		buf, err := json.Marshal(payload)
-		if err != nil {
-			erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
-			wishitem.WasPurchased = !wishitem.WasPurchased
-
-			_, err = payload.UpdateItem(*wishitem)
-			if err != nil {
-				erroMsg = fmt.Sprintf("ERROR Trying to update item AFTER marshalling %s", err)
-				fmt.Println(erroMsg)
-				return c.String(500, erroMsg)
-			}
-
-			fmt.Println(erroMsg)
-			c.String(500, erroMsg)
-		}
-
-		err = os.WriteFile(dataPath, buf, 0644)
-		if err != nil {
-			erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
-			fmt.Println(erroMsg)
-			c.String(500, erroMsg)
-		}
-
-		return c.Render(200, "wishlistitem", wishitem)
-	})
+	e.POST("/wishitem/:id/buy", purchaseItem)
 
 	//update item
-	e.POST("/wishitem", func(c echo.Context) error {
-		var requestItem WishItem
-		if err := c.Bind(&requestItem); err != nil {
-			return echo.NewHTTPError(http.StatusBadRequest, err.Error())
-		}
+	e.POST("/wishitem", updateWishItem)
 
-		_, err = payload.UpdateItem(requestItem)
-		if err != nil {
-			return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-		}
-
-		return c.JSON(http.StatusOK, requestItem)
-	})
-
-	e.GET("/", func(c echo.Context) error {
-		return c.Render(http.StatusOK, "index", payload)
-	})
+	e.GET("/", getMainPage)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -226,4 +148,99 @@ func main() {
 	}
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", port)))
+}
+
+func initWishList() {
+	//load the file
+	data, err := os.ReadFile(dataPath)
+	if err != nil {
+		fmt.Printf("ERROR %s: %v", "Reading file", err)
+	}
+
+	err = json.Unmarshal(data, &payload)
+	if err != nil {
+		fmt.Printf("ERROR %s: %v", "Parsing json", err)
+	}
+}
+
+func updateWishItem(c echo.Context) error {
+	var requestItem WishItem
+	if err := c.Bind(&requestItem); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	_, err := payload.UpdateItem(requestItem)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, requestItem)
+}
+
+func getMainPage(c echo.Context) error {
+	return c.Render(http.StatusOK, "index", payload)
+}
+
+func getFullWishList(c echo.Context) error {
+	return c.JSON(http.StatusOK, payload)
+}
+
+func replaceCompleteWishList(c echo.Context) error {
+	requestWishList := new(Wishlist)
+	if err := c.Bind(requestWishList); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	payload = *requestWishList
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
+		fmt.Println(erroMsg)
+		c.String(500, erroMsg)
+	}
+
+	err = os.WriteFile(dataPath, buf, 0644)
+	if err != nil {
+		erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
+		fmt.Println(erroMsg)
+		c.String(500, erroMsg)
+	}
+
+	return c.JSON(http.StatusOK, requestWishList)
+}
+
+func purchaseItem(c echo.Context) error {
+	id := c.Param("id")
+
+	wishitem := payload.ItemPurchased(id)
+	if wishitem == nil {
+		erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
+		fmt.Println(erroMsg)
+		c.String(404, erroMsg)
+	}
+
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
+		wishitem.WasPurchased = !wishitem.WasPurchased
+
+		_, err = payload.UpdateItem(*wishitem)
+		if err != nil {
+			erroMsg = fmt.Sprintf("ERROR Trying to update item AFTER marshalling %s", err)
+			fmt.Println(erroMsg)
+			return c.String(500, erroMsg)
+		}
+
+		fmt.Println(erroMsg)
+		c.String(500, erroMsg)
+	}
+
+	err = os.WriteFile(dataPath, buf, 0644)
+	if err != nil {
+		erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
+		fmt.Println(erroMsg)
+		c.String(500, erroMsg)
+	}
+
+	return c.Render(200, "wishlistitem", wishitem)
 }
