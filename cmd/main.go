@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -87,6 +88,48 @@ func (w *Wishlist) UpdateItem(requestItem WishItem) (string, error) {
 	return "", fmt.Errorf("item not found")
 }
 
+func (w *Wishlist) IndexOf(item WishItem) int {
+	index := -1
+	switch item.ItemType {
+	case "t-shirt":
+		index = slices.IndexFunc(w.Tshirts, func(i WishItem) bool {
+			return i.Id == item.Id
+		})
+	case "book":
+		index = slices.IndexFunc(w.Books, func(i WishItem) bool {
+			return i.Id == item.Id
+		})
+	default:
+		index = slices.IndexFunc(w.Other, func(i WishItem) bool {
+			return i.Id == item.Id
+		})
+	}
+
+	return index
+}
+
+func (w *Wishlist) AddItem(item WishItem) {
+	switch item.ItemType {
+	case "t-shirt":
+		w.Tshirts = append(w.Tshirts, item)
+	case "book":
+		w.Books = append(w.Books, item)
+	default:
+		w.Other = append(w.Other, item)
+	}
+}
+
+func (w *Wishlist) GetItem(itemType string, index int) WishItem {
+	switch itemType {
+	case "t-shirt":
+		return w.Tshirts[index]
+	case "book":
+		return w.Books[index]
+	default:
+		return w.Other[index]
+	}
+}
+
 type WishItem struct {
 	Id           string `json:"id"`
 	Name         string `json:"name"`
@@ -125,18 +168,21 @@ func main() {
 
 	initWishList()
 
-	e.GET("/wishlist", getFullWishList)
+	e.GET("/wishlist", getFullWishListHandler)
 
 	//replace the whole wishlist
-	e.POST("/wishlist", replaceCompleteWishList)
+	e.POST("/wishlist", replaceCompleteWishListHandler)
 
 	//marks the item as purchased
-	e.POST("/wishitem/:id/buy", purchaseItem)
+	e.POST("/wishitem/:id/buy", purchaseItemHandler)
 
 	//update item
-	e.POST("/wishitem", updateWishItem)
+	e.POST("/wishitem", updateWishItemHandler)
 
-	e.GET("/", getMainPage)
+	//create item
+	e.PUT("/wishitem", createWishItemHandler)
+
+	e.GET("/", getMainPageHandler)
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -163,60 +209,85 @@ func initWishList() {
 	}
 }
 
-func updateWishItem(c echo.Context) error {
+func createWishItemHandler(c echo.Context) error {
 	var requestItem WishItem
 	if err := c.Bind(&requestItem); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
+	if requestItem.Id == "" {
+		return fmt.Errorf("item has no id")
+	}
+
+	if requestItem.ItemType == "" {
+		return fmt.Errorf("item has no type")
+	}
+
+	index := payload.IndexOf(requestItem)
+
+	if index == -1 {
+		payload.AddItem(requestItem)
+		return c.JSON(http.StatusCreated, requestItem)
+	}
+
 	_, err := payload.UpdateItem(requestItem)
 	if err != nil {
+		fmt.Println(err)
+		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, requestItem)
+}
+
+func updateWishItemHandler(c echo.Context) error {
+	var requestItem WishItem
+	if err := c.Bind(&requestItem); err != nil {
+		fmt.Println(err)
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	_, err := payload.UpdateItem(requestItem)
+	if err != nil {
+		fmt.Println(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, requestItem)
 }
 
-func getMainPage(c echo.Context) error {
+func getMainPageHandler(c echo.Context) error {
 	return c.Render(http.StatusOK, "index", payload)
 }
 
-func getFullWishList(c echo.Context) error {
+func getFullWishListHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, payload)
 }
 
-func replaceCompleteWishList(c echo.Context) error {
+func replaceCompleteWishListHandler(c echo.Context) error {
 	requestWishList := new(Wishlist)
 	if err := c.Bind(requestWishList); err != nil {
+		fmt.Println(err)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
 	payload = *requestWishList
-	buf, err := json.Marshal(payload)
+	err := saveWishList()
 	if err != nil {
-		erroMsg := fmt.Sprintf("ERROR trying to marshal wishlist %s", err)
-		fmt.Println(erroMsg)
-		c.String(500, erroMsg)
-	}
+		fmt.Println(err)
+		echo.NewHTTPError(http.StatusInternalServerError, err)
 
-	err = os.WriteFile(dataPath, buf, 0644)
-	if err != nil {
-		erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
-		fmt.Println(erroMsg)
-		c.String(500, erroMsg)
 	}
-
 	return c.JSON(http.StatusOK, requestWishList)
 }
 
-func purchaseItem(c echo.Context) error {
+func purchaseItemHandler(c echo.Context) error {
 	id := c.Param("id")
 
 	wishitem := payload.ItemPurchased(id)
 	if wishitem == nil {
 		erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
 		fmt.Println(erroMsg)
-		c.String(404, erroMsg)
+		echo.NewHTTPError(http.StatusNotFound, erroMsg)
 	}
 
 	buf, err := json.Marshal(payload)
@@ -228,19 +299,33 @@ func purchaseItem(c echo.Context) error {
 		if err != nil {
 			erroMsg = fmt.Sprintf("ERROR Trying to update item AFTER marshalling %s", err)
 			fmt.Println(erroMsg)
-			return c.String(500, erroMsg)
+			return echo.NewHTTPError(http.StatusInternalServerError, erroMsg)
 		}
 
 		fmt.Println(erroMsg)
-		c.String(500, erroMsg)
+		echo.NewHTTPError(http.StatusInternalServerError, erroMsg)
 	}
 
 	err = os.WriteFile(dataPath, buf, 0644)
 	if err != nil {
 		erroMsg := fmt.Sprintf("ERROR trying to update file %s", err)
 		fmt.Println(erroMsg)
-		c.String(500, erroMsg)
+		echo.NewHTTPError(http.StatusInternalServerError, erroMsg)
 	}
 
-	return c.Render(200, "wishlistitem", wishitem)
+	return c.Render(http.StatusOK, "wishlistitem", wishitem)
+}
+
+func saveWishList() error {
+	buf, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("ERROR trying to marshal wishlist %s", err)
+	}
+
+	err = os.WriteFile(dataPath, buf, 0644)
+	if err != nil {
+		return fmt.Errorf("ERROR trying to update file %s", err)
+	}
+
+	return nil
 }

@@ -1,0 +1,28 @@
+meta {
+  name: Add Item
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{protocol}}://{{hostname}}/wishitem
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+        "id": "87614112-3549-1222-b15b-ea7a8b1de6fd",
+        "name": "legosaurus",
+        "title": "Legosaurus",
+        "description": "Amazing t-shirt. size: L",
+        "itemtype": "t-shirt",
+        "shopurl": "https://www.qwertee.com/shop/tees/legosaurus",
+        "waspurchased": false,
+        "imgsource": "https://cdn.qwertee.com/images/designs/product-thumbs/1727363001-134750-mens-500x600.jpg"
+      }
+}

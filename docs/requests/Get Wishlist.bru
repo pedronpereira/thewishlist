@@ -1,10 +1,10 @@
 meta {
-  name: Replace Wishlist
+  name: Get Wishlist
   type: http
-  seq: 2
+  seq: 5
 }
 
-post {
+get {
   url: {{protocol}}://{{hostname}}/wishlist
   body: json
   auth: none
