@@ -30,5 +30,8 @@ go.work.sum
 # Temporary folders
 tmp/
 
+# Data backups
+data/backups
+
 # Bruno environments
 docs/requests/environments
