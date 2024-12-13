@@ -1,4 +1,4 @@
-<h1 style="text-align:center">The Gift List</h1>
+<h1 style="text-align:center">The Wish List</h1>
 
 This small repository contains a simple website that shows a list of presents for friends and family to buy!
 
