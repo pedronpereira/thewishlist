@@ -162,7 +162,17 @@
             "shopUrl": "https://www.amazon.co.uk/dp/1471196690",
             "wasPurchased": false,
             "imgSource": "https://m.media-amazon.com/images/I/61b6uC-m2OL._SY522_.jpg"
-        }
+        },
+        {
+            "id": "65984124-3549-1222-b15b-ea7a8b1de6fd",
+            "name": "dantestory",
+            "title": "Lords of Blood",
+            "description": "Blood Angels Omnibus - For collection on the story of Blood Angels, Dante and Roboute Guilliman's return.",
+            "itemtype": "book",
+            "shopurl": "https://www.amazon.de/-/en/Lords-Blood-Angels-Omnibus-Warhammer/dp/1804075345/ref=sr_1_4",
+            "waspurchased": false,
+            "imgsource": "https://m.media-amazon.com/images/I/81TEzIMl3DL._SY522_.jpg"
+          }
     ],
     "other": [
         {
@@ -205,6 +215,36 @@
             "shopUrl": "https://shop.moonstonethegame.com/products/knoll-the-troll",
             "wasPurchased": false,
             "imgSource": "https://shop.moonstonethegame.com/cdn/shop/files/MS-BG015-Knoll_900x.jpg?v=1682605316"
-        }
+        },
+        {
+            "id": "65984112-3549-1222-b15b-ea7a8b1de6fd",
+            "name": "gscboss",
+            "title": "Malstrain Alpha",
+            "description": "Maybe a boss for my kill team",
+            "itemtype": "miniatures",
+            "shopurl": "https://www.warhammer.com/en-GB/shop/necromunda-hive-secundus-malstrain-alpha-2024",
+            "waspurchased": false,
+            "imgsource": "https://www.warhammer.com/app/resources/catalog/product/920x950/99850599114_NMHiveSecundusMalstrainAlpha01.jpg?fm=webp&w=920&h=948"
+          },
+          {
+            "id": "65984276-3549-1222-b15b-ea7a8b1de6fd",
+            "name": "gsclocus",
+            "title": "Genestealer Cults Locus",
+            "description": "The slashy guy for my kill team",
+            "itemtype": "miniatures",
+            "shopurl": "https://www.warhammer.com/en-GB/shop/Genestealer-Cults-Locus-2019",
+            "waspurchased": false,
+            "imgsource": "https://www.warhammer.com/app/resources/catalog/product/920x950/99070117007_GCSLocus01.jpg?fm=webp&w=920&h=948"
+          },
+          {
+            "id": "65984485-3549-1222-b15b-ea7a8b1de6fd",
+            "name": "sceknightarca",
+            "title": "SCE Knight Arcanum",
+            "description": "PEw pew cool mini",
+            "itemtype": "miniatures",
+            "shopurl": "https://www.warhammer.com/en-GB/shop/stormcast-eternals-knight-arcanum-2024",
+            "waspurchased": false,
+            "imgsource": "https://www.warhammer.com/app/resources/catalog/product/920x950/99120218093_SCEKnightArcanum1.jpg?fm=webp&w=920&h=948"
+          }
     ]
 }
