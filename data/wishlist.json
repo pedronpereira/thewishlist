@@ -1,4 +1,6 @@
 {
+    "_id": "12333312-4123-1222-b15b-ea7a8b1de6fd",
+    "title": "pedro's list",
     "count": 1,
     "tshirts": [
         {
@@ -160,7 +162,7 @@
             "description": "Livro do Ray Dalio para coleccao.",
             "itemType": "book",
             "shopUrl": "https://www.amazon.co.uk/dp/1471196690",
-            "wasPurchased": false,
+            "wasPurchased": true,
             "imgSource": "https://m.media-amazon.com/images/I/61b6uC-m2OL._SY522_.jpg"
         },
         {

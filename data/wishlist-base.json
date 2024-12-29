@@ -160,7 +160,7 @@
             "description": "Livro do Ray Dalio para coleccao.",
             "itemType": "book",
             "shopUrl": "https://www.amazon.co.uk/dp/1471196690",
-            "wasPurchased": false,
+            "wasPurchased": true,
             "imgSource": "https://m.media-amazon.com/images/I/61b6uC-m2OL._SY522_.jpg"
         },
         {

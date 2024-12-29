@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -11,9 +12,13 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type Wishlist struct {
+	Id      string `json:"_id"`
 	Count   int
 	Tshirts []WishItem
 	Books   []WishItem
@@ -197,7 +202,45 @@ func main() {
 }
 
 func initWishList() {
-	//load the file
+
+	dbType := os.Getenv("STORE_TYPE")
+	if dbType == "cloud" {
+		loadFromCloud()
+	} else {
+		loadFromFile()
+	}
+}
+
+func loadFromCloud() {
+	fmt.Println("Loading data from the Cloud")
+	uri := os.Getenv("CONN_STR")
+
+	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(uri))
+	if err != nil {
+		fmt.Printf("ERROR %s: %v", "Connecting to database", err)
+		panic(err)
+	}
+
+	defer func() {
+		if err := client.Disconnect(context.TODO()); err != nil {
+			panic(err)
+		}
+	}()
+
+	dbName := os.Getenv("DB_NAME")
+	dbCollection := os.Getenv("DB_COLLECTION")
+	coll := client.Database(dbName).Collection(dbCollection)
+
+	err = coll.FindOne(context.Background(), bson.D{{Key: "_id", Value: "12333312-4123-1222-b15b-ea7a8b1de6fd"}}).Decode(&payload)
+	if err != nil {
+		fmt.Printf("ERROR %s: %v", "Connecting to database", err)
+		panic(err)
+	}
+}
+
+func loadFromFile() {
+	fmt.Println("Loading data from file")
+
 	data, err := os.ReadFile(dataPath)
 	if err != nil {
 		fmt.Printf("ERROR %s: %v", "Reading file", err)
