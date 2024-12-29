@@ -42,6 +42,7 @@ func main() {
 	initWishList()
 
 	e.GET("/wishlist", getFullWishListHandler)
+	e.GET("/wishlist/refresh", refreshFullWishListHandler)
 
 	//replace the whole wishlist
 	e.POST("/wishlist", replaceCompleteWishListHandler)
@@ -149,6 +150,12 @@ func getMainPageHandler(c echo.Context) error {
 }
 
 func getFullWishListHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, payload)
+}
+
+func refreshFullWishListHandler(c echo.Context) error {
+	payload = dtProvider.Load()
+
 	return c.JSON(http.StatusOK, payload)
 }
 
