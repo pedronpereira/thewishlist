@@ -145,6 +145,7 @@ div {
 .wish-item-true {
     background-color: var(--card-bg-color-purchased);
     box-shadow: var(--shadow-minimal);
+    display: none;
 }
 
 .wish-item-false:hover {
@@ -177,7 +178,7 @@ img {
     width: 100%;
     max-width: 15rem;
     border-radius: 1rem;
-    object-fit: cover;
+    object-fit: contain;
 }
 
 .wishlist-header-avatar {

@@ -32,26 +32,6 @@
             "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1702472150-195389-mens-500x600.jpg"
         },
         {
-            "id": "87614112-3549-40c6-0010-ea318b1de6fd",
-            "name": "science707",
-            "title": "Science 707",
-            "description": "Science 707 t-shirt. size: L",
-            "itemType": "t-shirt",
-            "shopUrl": "https://www.qwertee.com/shop/tees/science-707",
-            "wasPurchased": false,
-            "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1721475326-191578-mens-500x600.jpg"
-        },
-        {
-            "id": "87614112-3549-40c6-0010-ea7a8agde6fd",
-            "name": "vintagenationalpark",
-            "title": "Tatooine National Park - Star wars",
-            "description": "Tatooine National Park Star Wars t-shirt. size: L",
-            "itemType": "t-shirt",
-            "shopUrl": "https://www.qwertee.com/shop/tees/vintage-national-park",
-            "wasPurchased": false,
-            "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1696684288-186947-mens-500x600.jpg"
-        },
-        {
             "id": "87614112-3549-40c6-0010-ea7a8b1nm6fd",
             "name": "nointernetdinosaur",
             "title": "No internet Dinosaurs",
@@ -60,16 +40,6 @@
             "shopUrl": "https://www.qwertee.com/shop/tees/no-internet-game-dinosaur",
             "wasPurchased": false,
             "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1713700059-133572-mens-500x600.jpg"
-        },
-        {
-            "id": "87614112-3549-40c6-0010-ea7a8b1126fd",
-            "name": "banksyflower",
-            "title": "Banksy flower",
-            "description": "Banksy flower t-shirt. size: L",
-            "itemType": "t-shirt",
-            "shopUrl": "https://www.qwertee.com/shop/tees/banksy-flower-368",
-            "wasPurchased": false,
-            "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1697443405-84081-mens-500x600.jpg"
         },
         {
             "id": "87614112-3549-40c6-0010-asf58b1de6fd",
@@ -120,16 +90,6 @@
             "shopUrl": "https://www.qwertee.com/shop/tees/bee-minimal",
             "wasPurchased": false,
             "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1721475347-217196-mens-500x600.jpg"
-        },
-        {
-            "id": "87614112-3549-40c6-0010-ea14gb1de6fd",
-            "name": "surfarrakis",
-            "title": "Surf Arrakis",
-            "description": "Surf Arrakis :) t-shirt. size: L",
-            "itemType": "t-shirt",
-            "shopUrl": "https://www.qwertee.com/shop/tees/visit-arrakis-823",
-            "wasPurchased": false,
-            "imgSource": "https://cdn.qwertee.com/images/designs/product-thumbs/1726083821-150378-mens-500x600.jpg"
         }
     ],
     "books": [
@@ -152,16 +112,6 @@
             "shopUrl": "https://www.amazon.co.uk/dp/1606600338/?coliid=I1QRT5XQDNLI59&colid=LCP9FU7SZA69&psc=1&ref_=list_c_wl_lv_ov_lig_dp_it",
             "wasPurchased": false,
             "imgSource": "https://m.media-amazon.com/images/I/81wXI6nmhnL._SY466_.jpg"
-        },
-        {
-            "id": "87614112-3549-40c6-4131-ea7a8b1de6fd",
-            "name": "principlesforachangingworldorder",
-            "title": "Principles for a Changing World Order",
-            "description": "Livro do Ray Dalio para coleccao.",
-            "itemType": "book",
-            "shopUrl": "https://www.amazon.co.uk/dp/1471196690",
-            "wasPurchased": true,
-            "imgSource": "https://m.media-amazon.com/images/I/61b6uC-m2OL._SY522_.jpg"
         },
         {
             "id": "65984124-3549-1222-b15b-ea7a8b1de6fd",

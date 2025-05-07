@@ -147,6 +147,7 @@ func (a *app) replaceCompleteWishListHandler(c echo.Context) error {
 func (a *app) purchaseItemHandler(c echo.Context) error {
 	id := c.Param("id")
 
+	//TODO: make the call open a pop-up
 	wishitem := payload.ItemPurchased(id)
 	if wishitem == nil {
 		erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
