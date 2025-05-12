@@ -18,7 +18,7 @@ func New() *app {
 	return &app{}
 }
 
-var payload domain.Wishlist
+var thewishlist domain.Wishlist
 
 const dataPath = "./data/wishlist.json"
 
@@ -33,7 +33,7 @@ func (a *app) Init() {
 		a.store = storage.NewFileStore(dataPath)
 	}
 
-	payload = a.store.Load()
+	thewishlist = a.store.Load()
 }
 
 func (a *app) RegisterHandlers(e *echo.Echo) {
@@ -67,22 +67,22 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 		return fmt.Errorf("item has no type")
 	}
 
-	index := payload.IndexOf(requestItem)
+	index := thewishlist.IndexOf(requestItem)
 
 	if index == -1 {
-		payload.AddItem(requestItem)
+		thewishlist.AddItem(requestItem)
 		return c.JSON(http.StatusCreated, requestItem)
 	}
 
-	_, err := payload.UpdateItem(requestItem)
+	_, err := thewishlist.UpdateItem(requestItem)
 	if err != nil {
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	err = a.store.SaveWishList(payload)
+	err = a.store.SaveWishList(thewishlist)
 	if err != nil {
-		payload = a.store.Load()
+		thewishlist = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -97,15 +97,15 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	_, err := payload.UpdateItem(requestItem)
+	_, err := thewishlist.UpdateItem(requestItem)
 	if err != nil {
 		fmt.Println(err)
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	err = a.store.SaveWishList(payload)
+	err = a.store.SaveWishList(thewishlist)
 	if err != nil {
-		payload = a.store.Load()
+		thewishlist = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -114,17 +114,17 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 }
 
 func (a *app) getMainPageHandler(c echo.Context) error {
-	return c.Render(http.StatusOK, "index", payload)
+	return c.Render(http.StatusOK, "index", thewishlist)
 }
 
 func (a *app) getFullWishListHandler(c echo.Context) error {
-	return c.JSON(http.StatusOK, payload)
+	return c.JSON(http.StatusOK, thewishlist)
 }
 
 func (a *app) refreshFullWishListHandler(c echo.Context) error {
-	payload = a.store.Load()
+	thewishlist = a.store.Load()
 
-	return c.JSON(http.StatusOK, payload)
+	return c.JSON(http.StatusOK, thewishlist)
 }
 
 func (a *app) replaceCompleteWishListHandler(c echo.Context) error {
@@ -134,8 +134,8 @@ func (a *app) replaceCompleteWishListHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	payload = *requestWishList
-	err := a.store.SaveWishList(payload)
+	thewishlist = *requestWishList
+	err := a.store.SaveWishList(thewishlist)
 	if err != nil {
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
@@ -148,16 +148,16 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 	id := c.Param("id")
 
 	//TODO: make the call open a pop-up
-	wishitem := payload.ItemPurchased(id)
+	wishitem := thewishlist.ItemPurchased(id)
 	if wishitem == nil {
 		erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
 		fmt.Println(erroMsg)
 		echo.NewHTTPError(http.StatusNotFound, erroMsg)
 	}
 
-	err := a.store.SaveWishList(payload)
+	err := a.store.SaveWishList(thewishlist)
 	if err != nil {
-		payload = a.store.Load()
+		thewishlist = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
