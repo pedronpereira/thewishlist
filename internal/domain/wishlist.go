@@ -15,28 +15,22 @@ type Wishlist struct {
 
 // Searches all items for the purchased item and returns the updated item
 func (w *Wishlist) ItemPurchased(id string) *WishItem {
-	for i, wishitem := range w.Other {
-		if wishitem.Id == id {
-			wishitem.WasPurchased = !wishitem.WasPurchased
-			w.Other[i] = wishitem
-			return &wishitem
-		}
+	i := slices.IndexFunc(w.Tshirts, func(item WishItem) bool { return item.Id == id })
+	if i != -1 {
+		w.Tshirts[i].WasPurchased = true
+		return &w.Tshirts[i]
 	}
 
-	for i, wishitem := range w.Books {
-		if wishitem.Id == id {
-			wishitem.WasPurchased = !wishitem.WasPurchased
-			w.Books[i] = wishitem
-			return &wishitem
-		}
+	i = slices.IndexFunc(w.Other, func(item WishItem) bool { return item.Id == id })
+	if i != -1 {
+		w.Other[i].WasPurchased = true
+		return &w.Other[i]
 	}
 
-	for i, wishitem := range w.Tshirts {
-		if wishitem.Id == id {
-			wishitem.WasPurchased = !wishitem.WasPurchased
-			w.Tshirts[i] = wishitem
-			return &wishitem
-		}
+	i = slices.IndexFunc(w.Books, func(item WishItem) bool { return item.Id == id })
+	if i != -1 {
+		w.Books[i].WasPurchased = true
+		return &w.Books[i]
 	}
 
 	return nil

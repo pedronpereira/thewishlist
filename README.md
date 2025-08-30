@@ -18,5 +18,5 @@ To test the project with hot reload I'm using [Go Air](https://github.com/air-ve
 
 Just build and run docker with:
 
-- `docker build -t <imagename>`
+- `docker build . -t <imagename>`
 - `docker run -p <port>:<port> <imagename>`
