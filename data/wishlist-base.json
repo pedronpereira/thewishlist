@@ -1,7 +1,5 @@
 {
-    "_id": "12333312-4123-1222-b15b-ea7a8b1de6fd",
-   "Count": 1,
-    "Tshirts": [
+    "items": [
         {
             "description": "Mushroom Graffiti t-shirt. size: L",
             "id": "87614112-3549-40c6-0001-ea7a8b1de6fd",
@@ -71,9 +69,7 @@
             "shopurl": "https://www.qwertee.com/shop/tees/bee-minimal",
             "title": "Bee Minimal",
             "waspurchased": false
-        }
-    ],
-   "Books": [
+        },
         {
             "description": "Dinotopia: Journey to Chandara",
             "id": "87614112-3549-40c6-0123-ea7a8b1de6fd",
@@ -113,9 +109,7 @@
             "shopurl": "https://www.amazon.de/-/en/Lords-Blood-Angels-Omnibus-Warhammer/dp/1804075345/ref=sr_1_4",
             "title": "Lords of Blood",
             "waspurchased": false
-        }
-    ],
-    "Other": [
+        },
         {
             "description": "Celestial Desk Mat. Extra large 900mm wide and 400mm tall",
             "id": "87614112-3549-40c6-0010-ea7a8b1de6fd",

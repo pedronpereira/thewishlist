@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,26 +19,25 @@ func New() *app {
 	return &app{}
 }
 
-var thewishlist domain.Wishlist
-
 const dataPath = "./data/wishlist.json"
 
-func (a *app) Init() {
-	dbType := os.Getenv("STORE_TYPE")
-	if dbType == "cloud" {
-		uri := os.Getenv("CONN_STR")
-		dbName := os.Getenv("DB_NAME")
-		dbCollection := os.Getenv("DB_COLLECTION")
-		a.store = storage.NewCloudStore(uri, dbName, dbCollection)
+func (a *app) Init() error {
+	if os.Getenv("STORE_TYPE") == "postgres" {
+		connString := os.Getenv("DATABASE_URL")
+		if connString == "" {
+			return fmt.Errorf("STORE_TYPE=postgres requires DATABASE_URL to be set")
+		}
+
+		store, err := storage.NewPostgresStore(context.Background(), connString)
+		if err != nil {
+			return fmt.Errorf("initializing postgres store: %w", err)
+		}
+		a.store = store
 	} else {
 		a.store = storage.NewFileStore(dataPath)
 	}
 
-	data, err := a.store.Load()
-	if err != nil {
-		fmt.Println(err)
-	}
-	thewishlist = data
+	return nil
 }
 
 func (a *app) RegisterHandlers(e *echo.Echo) {
@@ -57,17 +57,27 @@ func (a *app) RegisterHandlers(e *echo.Echo) {
 	e.POST("/wishitem/:id/buy", a.purchaseItemHandler)
 }
 
-// persist saves the current in-memory wishlist. If the save fails, it rolls
-// the in-memory wishlist back to snapshot instead of leaving an unsaved
-// mutation in memory, and returns an HTTP error describing the failure.
-func (a *app) persist(snapshot domain.Wishlist) error {
-	if err := a.store.SaveWishList(thewishlist); err != nil {
-		fmt.Println(err)
-		thewishlist = snapshot
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
+// wishlistView reproduces the Tshirts/Books/Other categorization the
+// template expects, derived at render time from the flat Items collection.
+type wishlistView struct {
+	Tshirts []domain.WishItem
+	Books   []domain.WishItem
+	Other   []domain.WishItem
+}
 
-	return nil
+func newWishlistView(w domain.Wishlist) wishlistView {
+	var view wishlistView
+	for _, item := range w.Items {
+		switch item.ItemType {
+		case "t-shirt":
+			view.Tshirts = append(view.Tshirts, item)
+		case "book":
+			view.Books = append(view.Books, item)
+		default:
+			view.Other = append(view.Other, item)
+		}
+	}
+	return view
 }
 
 func (a *app) createWishItemHandler(c echo.Context) error {
@@ -77,24 +87,26 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 	}
 
 	if requestItem.Id == "" {
-		return fmt.Errorf("item has no id")
+		return echo.NewHTTPError(http.StatusBadRequest, "item has no id")
 	}
 
 	if requestItem.ItemType == "" {
-		return fmt.Errorf("item has no type")
+		return echo.NewHTTPError(http.StatusBadRequest, "item has no type")
 	}
 
-	snapshot := thewishlist.Clone()
-
-	if thewishlist.IndexOf(requestItem) == -1 {
-		thewishlist.AddItem(requestItem)
-	} else if _, err := thewishlist.UpdateItem(requestItem); err != nil {
-		fmt.Println(err)
+	wishlist, err := a.store.Load()
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := a.persist(snapshot); err != nil {
-		return err
+	if wishlist.IndexOf(requestItem) == -1 {
+		wishlist.AddItem(requestItem)
+	} else if _, err := wishlist.UpdateItem(requestItem); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := a.store.SaveWishList(wishlist); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, requestItem)
@@ -103,54 +115,60 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 func (a *app) updateWishItemHandler(c echo.Context) error {
 	var requestItem domain.WishItem
 	if err := c.Bind(&requestItem); err != nil {
-		fmt.Println(err)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	snapshot := thewishlist.Clone()
-
-	if _, err := thewishlist.UpdateItem(requestItem); err != nil {
-		fmt.Println(err)
+	wishlist, err := a.store.Load()
+	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := a.persist(snapshot); err != nil {
-		return err
+	if _, err := wishlist.UpdateItem(requestItem); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	if err := a.store.SaveWishList(wishlist); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, requestItem)
 }
 
 func (a *app) getMainPageHandler(c echo.Context) error {
-	return c.Render(http.StatusOK, "index", thewishlist)
+	wishlist, err := a.store.Load()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.Render(http.StatusOK, "index", newWishlistView(wishlist))
 }
 
 func (a *app) getFullWishListHandler(c echo.Context) error {
-	return c.JSON(http.StatusOK, thewishlist)
+	wishlist, err := a.store.Load()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, wishlist)
 }
 
 func (a *app) refreshFullWishListHandler(c echo.Context) error {
-	thewishlist, err := a.store.Load()
+	wishlist, err := a.store.Load()
 	if err != nil {
-		fmt.Println(err)
-		echo.NewHTTPError(http.StatusInternalServerError, err)
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.JSON(http.StatusOK, thewishlist)
+	return c.JSON(http.StatusOK, wishlist)
 }
 
 func (a *app) replaceCompleteWishListHandler(c echo.Context) error {
 	requestWishList := new(domain.Wishlist)
 	if err := c.Bind(requestWishList); err != nil {
-		fmt.Println(err)
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	snapshot := thewishlist.Clone()
-	thewishlist = *requestWishList
-
-	if err := a.persist(snapshot); err != nil {
-		return err
+	if err := a.store.SaveWishList(*requestWishList); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.JSON(http.StatusOK, requestWishList)
@@ -159,18 +177,19 @@ func (a *app) replaceCompleteWishListHandler(c echo.Context) error {
 func (a *app) purchaseItemHandler(c echo.Context) error {
 	id := c.Param("id")
 
-	snapshot := thewishlist.Clone()
-
-	//TODO: make the call open a pop-up
-	wishitem := thewishlist.ItemPurchased(id)
-	if wishitem == nil {
-		erroMsg := fmt.Sprintf("ERROR trying to update file %s: Item not found", id)
-		fmt.Println(erroMsg)
-		return echo.NewHTTPError(http.StatusNotFound, erroMsg)
+	wishlist, err := a.store.Load()
+	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	if err := a.persist(snapshot); err != nil {
-		return err
+	//TODO: make the call open a pop-up
+	wishitem := wishlist.ItemPurchased(id)
+	if wishitem == nil {
+		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
+	}
+
+	if err := a.store.SaveWishList(wishlist); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
 	return c.Render(http.StatusOK, "wishlistitem", wishitem)

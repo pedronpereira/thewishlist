@@ -2,39 +2,17 @@ package main
 
 import (
 	"fmt"
-	"html/template"
-	"io"
+	"log"
 	"os"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"github.com/pedronpereira/thewishlist/internal/app"
+	"github.com/pedronpereira/thewishlist/internal/webapp"
 )
 
-type Templates struct {
-	templates *template.Template
-}
-
-func (t *Templates) Render(w io.Writer, name string, data interface{}, c echo.Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
-
-func newTemplate() *Templates {
-	return &Templates{
-		templates: template.Must(template.ParseGlob("views/*.html")),
-	}
-}
-
 func main() {
-	e := echo.New()
-	e.Use(middleware.Logger())
-
-	e.Static("/css", "css")
-	e.Renderer = newTemplate()
-
-	app := app.New()
-	app.Init()
-	app.RegisterHandlers(e)
+	e, err := webapp.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

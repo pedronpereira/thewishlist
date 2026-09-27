@@ -14,11 +14,3 @@ func NewFileStore(path string) *FileStore {
 		path: path,
 	}
 }
-
-func NewCloudStore(uri string, dbName string, collection string) *MongoCloudStore {
-	return &MongoCloudStore{
-		uri:        uri,
-		dbName:     dbName,
-		collection: collection,
-	}
-}
