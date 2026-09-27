@@ -13,6 +13,20 @@ type Wishlist struct {
 	Other   []WishItem
 }
 
+// Clone returns a deep copy of the wishlist. Because WishItem holds no
+// reference types of its own, cloning the three slices is enough to ensure
+// mutations to the clone (including in-place replacement of an item) never
+// alias w's underlying arrays.
+func (w Wishlist) Clone() Wishlist {
+	return Wishlist{
+		Id:      w.Id,
+		Count:   w.Count,
+		Tshirts: slices.Clone(w.Tshirts),
+		Books:   slices.Clone(w.Books),
+		Other:   slices.Clone(w.Other),
+	}
+}
+
 // Searches all items for the purchased item and returns the updated item
 func (w *Wishlist) ItemPurchased(id string) *WishItem {
 	i := slices.IndexFunc(w.Tshirts, func(item WishItem) bool { return item.Id == id })

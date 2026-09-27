@@ -2,6 +2,33 @@ package domain
 
 import "testing"
 
+func TestClone(t *testing.T) {
+	w := Wishlist{
+		Id:      "1",
+		Count:   2,
+		Tshirts: []WishItem{{Id: "t1", Name: "old"}},
+		Books:   []WishItem{{Id: "b1"}},
+		Other:   []WishItem{{Id: "o1"}},
+	}
+
+	clone := w.Clone()
+
+	// Mutate the clone in ways that would alias w's backing arrays if
+	// Clone were a shallow copy: an in-place field change and an append.
+	clone.Tshirts[0].Name = "new"
+	clone.AddItem(WishItem{Id: "t2", ItemType: "t-shirt"})
+
+	if w.Tshirts[0].Name != "old" {
+		t.Fatalf("expected original Tshirts[0].Name unaffected, got %q", w.Tshirts[0].Name)
+	}
+	if len(w.Tshirts) != 1 {
+		t.Fatalf("expected original Tshirts length unaffected, got %d", len(w.Tshirts))
+	}
+	if len(clone.Tshirts) != 2 {
+		t.Fatalf("expected clone Tshirts length to grow independently, got %d", len(clone.Tshirts))
+	}
+}
+
 func TestAddItem(t *testing.T) {
 	tests := []struct {
 		name     string
