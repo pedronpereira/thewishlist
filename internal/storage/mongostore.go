@@ -16,13 +16,14 @@ type MongoCloudStore struct {
 	collection string
 }
 
-func (cs *MongoCloudStore) Load() domain.Wishlist {
+func (cs *MongoCloudStore) Load() (domain.Wishlist, error) {
 	fmt.Println("Loading data from the Cloud")
 
 	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(cs.uri))
 	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Connecting to database", err)
-		panic(err)
+		return domain.Wishlist{}, fmt.Errorf("Connecting to database %q: %w", cs.uri, err)
+		// fmt.Printf("ERROR %s: %v", "Connecting to database", err)
+		// panic(err)
 	}
 
 	defer func() {
@@ -37,11 +38,12 @@ func (cs *MongoCloudStore) Load() domain.Wishlist {
 	var payload domain.Wishlist
 	err = coll.FindOne(context.Background(), filter).Decode(&payload)
 	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Connecting to database", err)
-		panic(err)
+		return domain.Wishlist{}, fmt.Errorf("Connecting to database %q: %w", cs.uri, err)
+		// fmt.Printf("ERROR %s: %v", "Connecting to database", err)
+		// panic(err)
 	}
 
-	return payload
+	return payload, nil
 }
 
 func (cs *MongoCloudStore) SaveWishList(payload domain.Wishlist) error {

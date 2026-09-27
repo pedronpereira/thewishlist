@@ -12,21 +12,21 @@ type FileStore struct {
 	path string
 }
 
-func (fs *FileStore) Load() domain.Wishlist {
+func (fs *FileStore) Load() (domain.Wishlist, error) {
 	fmt.Println("Loading data from file")
 
 	data, err := os.ReadFile(fs.path)
 	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Reading file", err)
+		return domain.Wishlist{}, fmt.Errorf("read wishlist file %q: %w", fs.path, err)
 	}
 
 	var payload domain.Wishlist
 	err = json.Unmarshal(data, &payload)
 	if err != nil {
-		fmt.Printf("ERROR %s: %v", "Parsing json", err)
+		return domain.Wishlist{}, fmt.Errorf("Parsing json file %q: %w", fs.path, err)
 	}
 
-	return payload
+	return payload, nil
 }
 
 func (fs *FileStore) SaveWishList(payload domain.Wishlist) error {

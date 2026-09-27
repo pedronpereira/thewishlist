@@ -5,7 +5,7 @@ import (
 )
 
 type Store interface {
-	Load() domain.Wishlist
+	Load() (domain.Wishlist, error)
 	SaveWishList(payload domain.Wishlist) error
 }
 

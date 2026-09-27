@@ -16,7 +16,7 @@ func New() *InMemoryStorageCache {
 // Load() domain.Wishlist
 // SaveWishList(payload domain.Wishlist) error
 
-func (mc *InMemoryStorageCache) Load() domain.Wishlist {
+func (mc *InMemoryStorageCache) Load() (domain.Wishlist, error) {
 	return mc.store.Load()
 }
 

@@ -33,7 +33,11 @@ func (a *app) Init() {
 		a.store = storage.NewFileStore(dataPath)
 	}
 
-	thewishlist = a.store.Load()
+	data, err := a.store.Load()
+	if err != nil {
+		fmt.Println(err)
+	}
+	thewishlist = data
 }
 
 func (a *app) RegisterHandlers(e *echo.Echo) {
@@ -82,7 +86,8 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 
 	err = a.store.SaveWishList(thewishlist)
 	if err != nil {
-		thewishlist = a.store.Load()
+		fmt.Println(err)
+		thewishlist, err = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -105,7 +110,8 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 
 	err = a.store.SaveWishList(thewishlist)
 	if err != nil {
-		thewishlist = a.store.Load()
+		fmt.Println(err)
+		thewishlist, err = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}
@@ -122,7 +128,11 @@ func (a *app) getFullWishListHandler(c echo.Context) error {
 }
 
 func (a *app) refreshFullWishListHandler(c echo.Context) error {
-	thewishlist = a.store.Load()
+	thewishlist, err := a.store.Load()
+	if err != nil {
+		fmt.Println(err)
+		echo.NewHTTPError(http.StatusInternalServerError, err)
+	}
 
 	return c.JSON(http.StatusOK, thewishlist)
 }
@@ -157,7 +167,8 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 
 	err := a.store.SaveWishList(thewishlist)
 	if err != nil {
-		thewishlist = a.store.Load()
+		fmt.Println(err)
+		thewishlist, err = a.store.Load()
 		fmt.Println(err)
 		echo.NewHTTPError(http.StatusInternalServerError, err)
 	}

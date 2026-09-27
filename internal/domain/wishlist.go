@@ -45,23 +45,50 @@ func (w *Wishlist) UpdateItem(requestItem WishItem) (string, error) {
 		return "", fmt.Errorf("item has no type")
 	}
 
-	var collection *[]WishItem
-	switch requestItem.ItemType {
-	case "t-shirt":
-		collection = &w.Tshirts
-	case "book":
-		collection = &w.Books
-	default:
-		collection = &w.Other
-	}
-
-	index := slices.IndexFunc(*collection, SearchByIndex(requestItem))
+	currentCollection, index := w.findByID(requestItem.Id)
 	if index == -1 {
 		return "", fmt.Errorf("item not found")
 	}
 
-	(*collection)[index] = requestItem
+	targetCollection := w.collectionFor(requestItem.ItemType)
+
+	if currentCollection == targetCollection {
+		(*currentCollection)[index] = requestItem
+		return requestItem.ItemType, nil
+	}
+
+	// ItemType changed: move the item into its new collection instead of
+	// leaving a stale copy behind in the old one.
+	*currentCollection = slices.Delete(*currentCollection, index, index+1)
+	*targetCollection = append(*targetCollection, requestItem)
 	return requestItem.ItemType, nil
+}
+
+func (w *Wishlist) collectionFor(itemType string) *[]WishItem {
+	switch itemType {
+	case "t-shirt":
+		return &w.Tshirts
+	case "book":
+		return &w.Books
+	default:
+		return &w.Other
+	}
+}
+
+// findByID searches every collection for an item by id, regardless of its
+// ItemType, and returns a pointer to the collection it was found in along
+// with its index. It returns (nil, -1) if no item matches.
+func (w *Wishlist) findByID(id string) (*[]WishItem, int) {
+	if i := slices.IndexFunc(w.Tshirts, func(item WishItem) bool { return item.Id == id }); i != -1 {
+		return &w.Tshirts, i
+	}
+	if i := slices.IndexFunc(w.Books, func(item WishItem) bool { return item.Id == id }); i != -1 {
+		return &w.Books, i
+	}
+	if i := slices.IndexFunc(w.Other, func(item WishItem) bool { return item.Id == id }); i != -1 {
+		return &w.Other, i
+	}
+	return nil, -1
 }
 
 func (w *Wishlist) IndexOf(item WishItem) int {
@@ -90,16 +117,5 @@ func (w *Wishlist) AddItem(item WishItem) {
 		w.Books = append(w.Books, item)
 	default:
 		w.Other = append(w.Other, item)
-	}
-}
-
-func (w *Wishlist) GetItem(itemType string, index int) WishItem {
-	switch itemType {
-	case "t-shirt":
-		return w.Tshirts[index]
-	case "book":
-		return w.Books[index]
-	default:
-		return w.Other[index]
 	}
 }
