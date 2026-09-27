@@ -6,34 +6,18 @@ import (
 )
 
 type Wishlist struct {
-	Id      string `json:"_id"`
-	Count   int
-	Tshirts []WishItem
-	Books   []WishItem
-	Other   []WishItem
+	Items []WishItem `json:"items"`
 }
 
-// Searches all items for the purchased item and returns the updated item
+// ItemPurchased finds the item by id, marks it as purchased, and returns it.
 func (w *Wishlist) ItemPurchased(id string) *WishItem {
-	i := slices.IndexFunc(w.Tshirts, func(item WishItem) bool { return item.Id == id })
-	if i != -1 {
-		w.Tshirts[i].WasPurchased = true
-		return &w.Tshirts[i]
+	i := slices.IndexFunc(w.Items, func(item WishItem) bool { return item.Id == id })
+	if i == -1 {
+		return nil
 	}
 
-	i = slices.IndexFunc(w.Other, func(item WishItem) bool { return item.Id == id })
-	if i != -1 {
-		w.Other[i].WasPurchased = true
-		return &w.Other[i]
-	}
-
-	i = slices.IndexFunc(w.Books, func(item WishItem) bool { return item.Id == id })
-	if i != -1 {
-		w.Books[i].WasPurchased = true
-		return &w.Books[i]
-	}
-
-	return nil
+	w.Items[i].WasPurchased = true
+	return &w.Items[i]
 }
 
 func (w *Wishlist) UpdateItem(requestItem WishItem) (string, error) {
@@ -45,37 +29,17 @@ func (w *Wishlist) UpdateItem(requestItem WishItem) (string, error) {
 		return "", fmt.Errorf("item has no type")
 	}
 
-	var collection *[]WishItem
-	switch requestItem.ItemType {
-	case "t-shirt":
-		collection = &w.Tshirts
-	case "book":
-		collection = &w.Books
-	default:
-		collection = &w.Other
-	}
-
-	index := slices.IndexFunc(*collection, SearchByIndex(requestItem))
+	index := slices.IndexFunc(w.Items, SearchByIndex(requestItem))
 	if index == -1 {
 		return "", fmt.Errorf("item not found")
 	}
 
-	(*collection)[index] = requestItem
+	w.Items[index] = requestItem
 	return requestItem.ItemType, nil
 }
 
 func (w *Wishlist) IndexOf(item WishItem) int {
-	index := -1
-	switch item.ItemType {
-	case "t-shirt":
-		index = slices.IndexFunc(w.Tshirts, SearchByIndex(item))
-	case "book":
-		index = slices.IndexFunc(w.Books, SearchByIndex(item))
-	default:
-		index = slices.IndexFunc(w.Other, SearchByIndex(item))
-	}
-
-	return index
+	return slices.IndexFunc(w.Items, SearchByIndex(item))
 }
 
 func SearchByIndex(item WishItem) func(WishItem) bool {
@@ -83,23 +47,5 @@ func SearchByIndex(item WishItem) func(WishItem) bool {
 }
 
 func (w *Wishlist) AddItem(item WishItem) {
-	switch item.ItemType {
-	case "t-shirt":
-		w.Tshirts = append(w.Tshirts, item)
-	case "book":
-		w.Books = append(w.Books, item)
-	default:
-		w.Other = append(w.Other, item)
-	}
-}
-
-func (w *Wishlist) GetItem(itemType string, index int) WishItem {
-	switch itemType {
-	case "t-shirt":
-		return w.Tshirts[index]
-	case "book":
-		return w.Books[index]
-	default:
-		return w.Other[index]
-	}
+	w.Items = append(w.Items, item)
 }

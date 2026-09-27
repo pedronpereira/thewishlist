@@ -10,8 +10,7 @@ RUN go build -o /go/bin/app -v ./cmd/main.go
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
 COPY --from=builder /go/bin/app /app
-COPY ./views /views
-COPY ./css /css
+COPY ./public/css /public/css
 COPY ./data /data
 ENTRYPOINT /app
 LABEL Name=thewishlist Version=0.0.1

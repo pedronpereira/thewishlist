@@ -4,7 +4,7 @@ This small repository contains a simple website that shows a list of presents fo
 
 ## Running the app
 
-There are two ways of running this locally.
+There are a few ways of running this locally, plus a Vercel deployment.
 
 ### Debugging with Go Air
 
@@ -14,9 +14,26 @@ To test the project with hot reload I'm using [Go Air](https://github.com/air-ve
 - Get all the packages with `go mod tidy`
 - Run the command `air`
 
+By default this uses a local JSON file (`data/wishlist.json`) for storage — no database required.
+
+### Plain `go run`
+
+- `go run cmd/main.go`
+
 ### Docker image
 
-Just build and run docker with:
+- `docker build . -t thewishlist`
+- `docker run -p 43067:43067 thewishlist`
 
-- `docker build . -t <imagename>`
-- `docker run -p <port>:<port> <imagename>`
+### Vercel (production)
+
+Vercel is the deployment target: the app runs as a serverless function (`api/index.go`, routed via `vercel.json`), backed by PostgreSQL instead of the local JSON file. See `docs/design.md` for the architecture. The app was previously deployed to Azure (Container App / Web App) — that's been retired in favor of Vercel.
+
+## Environment variables
+
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `PORT` | No | Port to listen on (checked first). Only used by `cmd/main.go`'s own server loop, not by Vercel. |
+| `WEBSITES_PORT` | No | Fallback port. Left over from the retired Azure App Service deployment — harmless to keep, but no longer meaningful. Falls back to `43067` if neither `PORT` nor this is set. |
+| `STORE_TYPE` | No | Set to `postgres` to use PostgreSQL instead of the local JSON file. Any other value (or unset) uses `data/wishlist.json`. |
+| `DATABASE_URL` | Only if `STORE_TYPE=postgres` | Postgres connection string. On Neon, use the pooled/pgbouncer variant. |
