@@ -7,11 +7,16 @@ meta {
 post {
   url: {{protocol}}://{{hostname}}/wishlist
   body: json
-  auth: none
+  auth: basic
 }
 
 headers {
   Content-Type: application/json
+}
+
+auth:basic {
+  username: {{wishlistUsername}}
+  password: {{wishlistPassword}}
 }
 
 body:json {

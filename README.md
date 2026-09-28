@@ -37,3 +37,5 @@ Vercel is the deployment target: the app runs as a serverless function (`api/ind
 | `WEBSITES_PORT` | No | Fallback port. Left over from the retired Azure App Service deployment — harmless to keep, but no longer meaningful. Falls back to `43067` if neither `PORT` nor this is set. |
 | `STORE_TYPE` | No | Set to `postgres` to use PostgreSQL instead of the local JSON file. Any other value (or unset) uses `data/wishlist.json`. |
 | `DATABASE_URL` | Only if `STORE_TYPE=postgres` | Postgres connection string. On Neon, use the pooled/pgbouncer variant. |
+| `WISHLIST_PASSWORD` | No, but strongly recommended for any real deployment | Enables HTTP Basic Auth for every route when set. If unset, the site is completely open — a startup log line makes this visible either way. |
+| `WISHLIST_USERNAME` | No | Basic Auth username. Defaults to `family` if `WISHLIST_PASSWORD` is set but this isn't. |
