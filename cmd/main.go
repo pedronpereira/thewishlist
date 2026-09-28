@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/pedronpereira/thewishlist/internal/webapp"
+	"github.com/pedronpereira/thewishlist/webapp"
 )
 
 func main() {

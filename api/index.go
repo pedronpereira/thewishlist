@@ -8,7 +8,7 @@ import (
 	"sync"
 
 	"github.com/labstack/echo/v4"
-	"github.com/pedronpereira/thewishlist/internal/webapp"
+	"github.com/pedronpereira/thewishlist/webapp"
 )
 
 var (
