@@ -13,7 +13,7 @@
     </head>
     <body>
         <!-- Here style for the container -->
-        <div class="wishlist-cards-container">
+        <div class="wishlist-cards-container" hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
             <div class="wishlist-header">
                 <img class="wishlist-header-avatar" src="https://avatars.githubusercontent.com/u/6302574?v=4"/>
                 <div>

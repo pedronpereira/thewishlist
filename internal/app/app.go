@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/pedronpereira/thewishlist/internal/domain"
 	"github.com/pedronpereira/thewishlist/internal/storage"
 )
@@ -60,9 +61,10 @@ func (a *app) RegisterHandlers(e *echo.Echo) {
 // wishlistView reproduces the Tshirts/Books/Other categorization the
 // template expects, derived at render time from the flat Items collection.
 type wishlistView struct {
-	Tshirts []domain.WishItem
-	Books   []domain.WishItem
-	Other   []domain.WishItem
+	Tshirts   []domain.WishItem
+	Books     []domain.WishItem
+	Other     []domain.WishItem
+	CSRFToken string
 }
 
 func newWishlistView(w domain.Wishlist) wishlistView {
@@ -140,7 +142,12 @@ func (a *app) getMainPageHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.Render(http.StatusOK, "index", newWishlistView(wishlist))
+	view := newWishlistView(wishlist)
+	if token, ok := c.Get(middleware.DefaultCSRFConfig.ContextKey).(string); ok {
+		view.CSRFToken = token
+	}
+
+	return c.Render(http.StatusOK, "index", view)
 }
 
 func (a *app) getFullWishListHandler(c echo.Context) error {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"net/http"
 	"os"
 
 	"github.com/labstack/echo/v4"
@@ -31,6 +32,7 @@ func New() (*echo.Echo, error) {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	useBasicAuth(e)
+	useCSRFProtection(e)
 	e.Static("/css", "public/css")
 
 	tmpl, err := template.ParseFS(viewsFS, "views/*.html")
@@ -68,5 +70,27 @@ func useBasicAuth(e *echo.Echo) {
 		validUser := subtle.ConstantTimeCompare([]byte(u), []byte(username)) == 1
 		validPass := subtle.ConstantTimeCompare([]byte(p), []byte(password)) == 1
 		return validUser && validPass, nil
+	}))
+}
+
+// useCSRFProtection guards the one browser-driven mutation in this app: the
+// "Comprei" (buy) button, rendered on GET / and submitted via an HTMX POST.
+// It's scoped to just those two routes rather than applied globally, so the
+// JSON API endpoints (used directly via curl/Bruno for administration) don't
+// need a token dance. Uses Echo's default double-submit-cookie CSRF
+// middleware; the token is read back from the X-CSRF-Token header, which the
+// template sets via an inherited hx-headers attribute.
+func useCSRFProtection(e *echo.Echo) {
+	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
+		Skipper: func(c echo.Context) bool {
+			switch {
+			case c.Request().Method == http.MethodGet && c.Path() == "/":
+				return false
+			case c.Request().Method == http.MethodPost && c.Path() == "/wishitem/:id/buy":
+				return false
+			default:
+				return true
+			}
+		},
 	}))
 }
