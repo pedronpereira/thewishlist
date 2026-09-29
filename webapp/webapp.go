@@ -50,10 +50,18 @@ func New() (*echo.Echo, error) {
 	return e, nil
 }
 
-// useBasicAuth protects every route with a single shared username/password,
-// read from WISHLIST_USERNAME/WISHLIST_PASSWORD. If WISHLIST_PASSWORD isn't
-// set, the site is left unprotected — with a startup log making that
-// visible, so an unset password on a real deployment isn't a silent gap.
+// useBasicAuth protects every route with Basic Auth, checked against two
+// possible credential pairs: a shared family login (WISHLIST_USERNAME/
+// WISHLIST_PASSWORD) and an admin login (WISHLIST_ADMIN_USERNAME/
+// WISHLIST_ADMIN_PASSWORD). If WISHLIST_PASSWORD isn't set, the site is left
+// unprotected entirely — with a startup log making that visible, so an
+// unset password on a real deployment isn't a silent gap. Admin login is
+// opt-in on top of that: if WISHLIST_ADMIN_PASSWORD isn't set, it's simply
+// never reachable. A successful admin match sets "isAdmin" on the request
+// context for downstream handlers (e.g. to hide purchased items from the
+// admin's own view). No session storage is needed for any of this — Basic
+// Auth re-sends the full credential on every request, so each request is
+// independently and statelessly re-checked.
 func useBasicAuth(e *echo.Echo) {
 	password := os.Getenv("WISHLIST_PASSWORD")
 	if password == "" {
@@ -66,10 +74,26 @@ func useBasicAuth(e *echo.Echo) {
 		username = "family"
 	}
 
+	adminPassword := os.Getenv("WISHLIST_ADMIN_PASSWORD")
+	adminUsername := os.Getenv("WISHLIST_ADMIN_USERNAME")
+	if adminUsername == "" {
+		adminUsername = "admin"
+	}
+
 	e.Use(middleware.BasicAuth(func(u, p string, c echo.Context) (bool, error) {
-		validUser := subtle.ConstantTimeCompare([]byte(u), []byte(username)) == 1
-		validPass := subtle.ConstantTimeCompare([]byte(p), []byte(password)) == 1
-		return validUser && validPass, nil
+		if subtle.ConstantTimeCompare([]byte(u), []byte(username)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(p), []byte(password)) == 1 {
+			return true, nil
+		}
+
+		if adminPassword != "" &&
+			subtle.ConstantTimeCompare([]byte(u), []byte(adminUsername)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(p), []byte(adminPassword)) == 1 {
+			c.Set("isAdmin", true)
+			return true, nil
+		}
+
+		return false, nil
 	}))
 }
 

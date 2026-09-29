@@ -1,0 +1,27 @@
+{{ block "wishlistitem" . }}
+{{ if not .HiddenFromViewer }}
+    <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}" hx-ext="morph">
+        <img src="{{ .ImgSource }}"/>
+        <div class="wish-item-content">
+            <div class="wish-item-text">
+                <p class="wish-item-title">{{ .Title }}</p>
+                <p class="wish-item-description">{{ .Description }}</p>
+            </div>
+
+            {{ if .WasPurchased }}
+            <p class="wish-item-msg-bought">This item was already purchased!</p>
+            {{ else }}
+            <div class="wish-items-ops">
+                <a class="wish-item-link" href="{{ .ShopUrl }}" target="_blank">Open Site</a>
+                <button
+                class="ops-btn-buy"
+                type="button"
+                hx-target="#wishitem-{{ .Id }}"
+                hx-swap="morph:outerHTML"
+                hx-post="/wishitem/{{ .Id }}/buy">Comprei</button>
+            </div>
+            {{ end }}
+        </div>
+    </div>
+{{ end }}
+{{ end }}

@@ -1,0 +1,37 @@
+{{ block "index" . }}
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Pedro's Wishlist</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+        <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
+        <link rel="stylesheet" href="../css/index-v1.css" type="text/css" />
+
+    </head>
+    <body>
+        <!-- Here style for the container -->
+        <div class="wishlist-cards-container" hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
+            <div class="wishlist-header">
+                <img class="wishlist-header-avatar" src="https://avatars.githubusercontent.com/u/6302574?v=4"/>
+                <div>
+                    <h1>Ola! Bem vindo ha minha wishlist!</h1>
+                    <p>Os items nos retangulos cinzentos ja foram comprados.</p>
+                    <p>Carrega nos links se quiseres ver a loja os podes comprar.</p>
+                </div>
+            </div>
+            <hr/>
+            {{ template "tshirtList" .Tshirts}}
+            <hr/>
+            {{ template "booksList" .Books}}
+            <hr />
+            {{ template "othersList" .Other}}
+            <hr />
+            <h4>That's All folks! &#128123</h4>
+        </div>
+    </body>
+</html>
+
+{{ end }}

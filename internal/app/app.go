@@ -58,25 +58,45 @@ func (a *app) RegisterHandlers(e *echo.Echo) {
 	e.POST("/wishitem/:id/buy", a.purchaseItemHandler)
 }
 
+// itemView adds view-only concerns to a WishItem without touching the
+// domain type. Embedding keeps every existing template reference (.Id,
+// .Title, etc.) working unchanged via field promotion.
+type itemView struct {
+	domain.WishItem
+	HiddenFromViewer bool
+}
+
+func newItemView(item domain.WishItem, isAdmin bool) itemView {
+	return itemView{
+		WishItem:         item,
+		HiddenFromViewer: isAdmin && item.WasPurchased,
+	}
+}
+
 // wishlistView reproduces the Tshirts/Books/Other categorization the
 // template expects, derived at render time from the flat Items collection.
 type wishlistView struct {
-	Tshirts   []domain.WishItem
-	Books     []domain.WishItem
-	Other     []domain.WishItem
+	Tshirts   []itemView
+	Books     []itemView
+	Other     []itemView
 	CSRFToken string
 }
 
-func newWishlistView(w domain.Wishlist) wishlistView {
+// newWishlistView categorizes items for the template and marks each item's
+// visibility for the current viewer: an admin never sees their own
+// purchased items (preserving surprises), while everyone else sees them
+// with the existing "already purchased" styling.
+func newWishlistView(w domain.Wishlist, isAdmin bool) wishlistView {
 	var view wishlistView
 	for _, item := range w.Items {
+		iv := newItemView(item, isAdmin)
 		switch item.ItemType {
 		case "t-shirt":
-			view.Tshirts = append(view.Tshirts, item)
+			view.Tshirts = append(view.Tshirts, iv)
 		case "book":
-			view.Books = append(view.Books, item)
+			view.Books = append(view.Books, iv)
 		default:
-			view.Other = append(view.Other, item)
+			view.Other = append(view.Other, iv)
 		}
 	}
 	return view
@@ -142,7 +162,8 @@ func (a *app) getMainPageHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	view := newWishlistView(wishlist)
+	isAdmin, _ := c.Get("isAdmin").(bool)
+	view := newWishlistView(wishlist, isAdmin)
 	if token, ok := c.Get(middleware.DefaultCSRFConfig.ContextKey).(string); ok {
 		view.CSRFToken = token
 	}
@@ -199,5 +220,6 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}
 
-	return c.Render(http.StatusOK, "wishlistitem", wishitem)
+	isAdmin, _ := c.Get("isAdmin").(bool)
+	return c.Render(http.StatusOK, "wishlistitem", newItemView(*wishitem, isAdmin))
 }

@@ -145,7 +145,6 @@ div {
 .wish-item-true {
     background-color: var(--card-bg-color-purchased);
     box-shadow: var(--shadow-minimal);
-    display: none;
 }
 
 .wish-item-false:hover {

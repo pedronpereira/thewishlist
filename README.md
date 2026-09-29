@@ -16,6 +16,8 @@ To test the project with hot reload I'm using [Go Air](https://github.com/air-ve
 
 By default this uses a local JSON file (`data/wishlist.json`) for storage — no database required.
 
+To test with things like Basic Auth locally, copy `.env.example` to `.env` and fill in whatever values you want — `air` and `go run cmd/main.go` both load it automatically (via [godotenv](https://github.com/joho/godotenv)), so you don't need to `$env:` export anything by hand each session. `.env` is gitignored; never commit real credentials into `.env.example`.
+
 ### Plain `go run`
 
 - `go run cmd/main.go`
@@ -38,4 +40,6 @@ Vercel is the deployment target: the app runs as a serverless function (`api/ind
 | `STORE_TYPE` | No | Set to `postgres` to use PostgreSQL instead of the local JSON file. Any other value (or unset) uses `data/wishlist.json`. |
 | `DATABASE_URL` | Only if `STORE_TYPE=postgres` | Postgres connection string. On Neon, use the pooled/pgbouncer variant. |
 | `WISHLIST_PASSWORD` | No, but strongly recommended for any real deployment | Enables HTTP Basic Auth for every route when set. If unset, the site is completely open — a startup log line makes this visible either way. |
-| `WISHLIST_USERNAME` | No | Basic Auth username. Defaults to `family` if `WISHLIST_PASSWORD` is set but this isn't. |
+| `WISHLIST_USERNAME` | No | Basic Auth username for the shared family login. Defaults to `family` if `WISHLIST_PASSWORD` is set but this isn't. |
+| `WISHLIST_ADMIN_PASSWORD` | No | A second Basic Auth login with elevated request-level access. Only reachable if `WISHLIST_PASSWORD` is also set. |
+| `WISHLIST_ADMIN_USERNAME` | No | Admin username. Defaults to `admin` if `WISHLIST_ADMIN_PASSWORD` is set but this isn't. |

@@ -1,0 +1,12 @@
+{{ block "tshirtList" . }} {{ template "itemlist" . }} {{ end }}
+{{ block "booksList" . }} {{ template "itemlist" . }} {{ end }}
+{{ block "othersList" . }} {{ template "itemlist" . }} {{ end }}
+
+{{ block "itemlist" . }}
+
+    {{ range $element := . }}
+
+        {{ template "wishlistitem" $element }}
+
+    {{ end }}
+{{ end }}
