@@ -129,6 +129,20 @@ div {
     padding-top: 3.8rem;
 }
 
+.wishlist-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1.2rem;
+}
+
+.wishlist-tab {
+    background-color: var(--card-bg-color-purchased);
+}
+
+.wishlist-tab-active {
+    background-color: var(--card-bg-color-available);
+}
+
 .wish-item-false, .wish-item-true {
     flex-direction: row;
     border-radius: 1rem;

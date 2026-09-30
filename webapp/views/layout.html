@@ -23,6 +23,12 @@
                 </div>
             </div>
             <hr/>
+            <div class="wishlist-tabs">
+                {{ range .Lists }}
+                <a class="wishlist-tab{{ if eq .Slug $.CurrentSlug }} wishlist-tab-active{{ end }}" href="/wishlist/{{ .Slug }}">{{ .Icon }} {{ .Name }} ({{ .ItemCount }})</a>
+                {{ end }}
+            </div>
+            <hr/>
             {{ template "tshirtList" .Tshirts}}
             <hr/>
             {{ template "booksList" .Books}}

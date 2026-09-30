@@ -2,6 +2,8 @@
 
 This small repository contains a simple website that shows a list of presents for friends and family to buy!
 
+The app supports multiple named lists (e.g. `/wishlist/pedro`, `/wishlist/wife`), switchable via a tab bar in the header.
+
 ## Running the app
 
 There are a few ways of running this locally, plus a Vercel deployment.
@@ -29,7 +31,7 @@ To test with things like Basic Auth locally, copy `.env.example` to `.env` and f
 
 ### Vercel (production)
 
-Vercel is the deployment target: the app runs as a serverless function (`api/index.go`, routed via `vercel.json`), backed by PostgreSQL instead of the local JSON file. See `docs/design.md` for the architecture. The app was previously deployed to Azure (Container App / Web App) — that's been retired in favor of Vercel.
+Vercel is the deployment target: the app runs as a serverless function (`api/index.go`, routed via `vercel.json`), backed by PostgreSQL instead of the local JSON file. The app was previously deployed to Azure (Container App / Web App) — that's been retired in favor of Vercel.
 
 ## Environment variables
 

@@ -18,7 +18,7 @@
                 type="button"
                 hx-target="#wishitem-{{ .Id }}"
                 hx-swap="morph:outerHTML"
-                hx-post="/wishitem/{{ .Id }}/buy">Comprei</button>
+                hx-post="/wishlist/{{ .ListSlug }}/wishitem/{{ .Id }}/buy">Comprei</button>
             </div>
             {{ end }}
         </div>

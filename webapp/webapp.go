@@ -98,19 +98,20 @@ func useBasicAuth(e *echo.Echo) {
 }
 
 // useCSRFProtection guards the one browser-driven mutation in this app: the
-// "Comprei" (buy) button, rendered on GET / and submitted via an HTMX POST.
-// It's scoped to just those two routes rather than applied globally, so the
-// JSON API endpoints (used directly via curl/Bruno for administration) don't
-// need a token dance. Uses Echo's default double-submit-cookie CSRF
-// middleware; the token is read back from the X-CSRF-Token header, which the
-// template sets via an inherited hx-headers attribute.
+// "Comprei" (buy) button, rendered on a list's page and submitted via an
+// HTMX POST. It's scoped to just those two routes rather than applied
+// globally, so the JSON API endpoints (used directly via curl/Bruno for
+// administration) don't need a token dance. Uses Echo's default
+// double-submit-cookie CSRF middleware; the token is read back from the
+// X-CSRF-Token header, which the template sets via an inherited hx-headers
+// attribute.
 func useCSRFProtection(e *echo.Echo) {
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		Skipper: func(c echo.Context) bool {
 			switch {
-			case c.Request().Method == http.MethodGet && c.Path() == "/":
+			case c.Request().Method == http.MethodGet && c.Path() == "/wishlist/:slug":
 				return false
-			case c.Request().Method == http.MethodPost && c.Path() == "/wishitem/:id/buy":
+			case c.Request().Method == http.MethodPost && c.Path() == "/wishlist/:slug/wishitem/:id/buy":
 				return false
 			default:
 				return true
