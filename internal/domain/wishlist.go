@@ -49,3 +49,15 @@ func SearchByIndex(item WishItem) func(WishItem) bool {
 func (w *Wishlist) AddItem(item WishItem) {
 	w.Items = append(w.Items, item)
 }
+
+// RemoveItem removes the item with the given id, if present, and reports
+// whether it was found.
+func (w *Wishlist) RemoveItem(id string) bool {
+	i := slices.IndexFunc(w.Items, func(item WishItem) bool { return item.Id == id })
+	if i == -1 {
+		return false
+	}
+
+	w.Items = slices.Delete(w.Items, i, i+1)
+	return true
+}

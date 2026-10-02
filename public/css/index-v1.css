@@ -143,6 +143,12 @@ div {
     background-color: var(--card-bg-color-available);
 }
 
+.btn-add-item {
+    background-color: var(--card-bg-color-available);
+    margin-left: auto;
+    white-space: nowrap;
+}
+
 .wish-item-false, .wish-item-true {
     flex-direction: row;
     border-radius: 1rem;
@@ -184,6 +190,37 @@ div {
     gap: 1.2rem;
 }
 
+.wish-item-admin-ops {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.8rem;
+}
+
+.wish-item-admin-ops .remove-confirm-actions {
+    display: none;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.wish-item-admin-ops.confirming .remove-confirm-trigger {
+    display: none;
+}
+
+.wish-item-admin-ops.confirming .remove-confirm-actions {
+    display: flex;
+}
+
+.btn-edit, .btn-remove, .btn-confirm-yes, .btn-confirm-no {
+    font-size: 1.6rem;
+    padding: 0.6rem 1.6rem;
+}
+
+.wishlist-grid {
+    flex-direction: column;
+}
+
 
 /* ----------------------------- ELEMENTS ----------------------------- */
 
@@ -209,12 +246,77 @@ hr {
     margin: 3.2rem 0;
 }
 
+dialog.item-dialog {
+    max-width: 48rem;
+    width: 90vw;
+    border: none;
+    border-radius: 1.6rem;
+    padding: 2.4rem;
+    box-shadow: var(--shadow-default);
+    background-color: var(--main-bg-color);
+}
+
+dialog.item-dialog::backdrop {
+    background-color: rgba(23, 24, 32, 0.4);
+}
+
+.dialog-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.6rem;
+}
+
+.dialog-close {
+    font-size: 1.6rem;
+    padding: 0.6rem 1.6rem;
+}
+
+.item-dialog form {
+    gap: 1.2rem;
+}
+
+.item-dialog label {
+    gap: 0.4rem;
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+.item-dialog label.checkbox-label {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.item-dialog input, .item-dialog textarea {
+    font-size: 1.6rem;
+    font-family: inherit;
+    padding: 1rem 1.4rem;
+    border: 0.1rem solid var(--divider-color);
+    border-radius: 0.8rem;
+    background-color: var(--button-bg-color);
+}
+
+.item-dialog input[type="checkbox"] {
+    width: auto;
+    flex: none;
+}
+
+.dialog-submit {
+    background-color: var(--card-bg-color-available);
+    margin-top: 0.8rem;
+}
+
 
 /* ----------------------------- MEDIA QUERIES ----------------------------- */
 @media screen and (max-width: 560px) {
     .wishlist-header {
         flex-direction: column;
         gap: 2rem;
+    }
+
+    .btn-add-item {
+        margin-left: 0;
     }
 
     .wish-item-false, .wish-item-true {
@@ -230,5 +332,23 @@ hr {
     .wish-items-ops {
         flex-wrap: wrap;
         justify-content: center;
+    }
+}
+
+@media screen and (min-width: 900px) {
+    .wishlist-cards-container {
+        max-width: 100rem;
+    }
+
+    .wishlist-grid {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 2rem;
+    }
+
+    .wishlist-grid .wish-item-false,
+    .wishlist-grid .wish-item-true {
+        flex: 1 1 32rem;
+        margin-bottom: 0;
     }
 }

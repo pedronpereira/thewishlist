@@ -97,14 +97,19 @@ func useBasicAuth(e *echo.Echo) {
 	}))
 }
 
-// useCSRFProtection guards the one browser-driven mutation in this app: the
-// "Comprei" (buy) button, rendered on a list's page and submitted via an
-// HTMX POST. It's scoped to just those two routes rather than applied
-// globally, so the JSON API endpoints (used directly via curl/Bruno for
-// administration) don't need a token dance. Uses Echo's default
-// double-submit-cookie CSRF middleware; the token is read back from the
-// X-CSRF-Token header, which the template sets via an inherited hx-headers
-// attribute.
+// useCSRFProtection guards every browser-driven mutation in this app: the
+// "Comprei" (buy) button, and — since the admin add/edit/remove item UI
+// (Phase 3a) — the admin item CRUD actions too. It's scoped to just these
+// routes rather than applied globally, so the full-list JSON API endpoints
+// (used directly via curl/Bruno for bulk import/export) don't need a token
+// dance. Uses Echo's default double-submit-cookie CSRF middleware; the
+// token is read back from the X-CSRF-Token header, which the template sets
+// via an inherited hx-headers attribute.
+//
+// Consequence: PUT/POST /wishlist/:slug/wishitem and the new DELETE route
+// now require a valid CSRF token, so docs/requests/Add Item.bru and Update
+// Item.bru (plain curl, no token) no longer work standalone — accepted,
+// since the admin UI supersedes that curl workflow.
 func useCSRFProtection(e *echo.Echo) {
 	e.Use(middleware.CSRFWithConfig(middleware.CSRFConfig{
 		Skipper: func(c echo.Context) bool {
@@ -112,6 +117,14 @@ func useCSRFProtection(e *echo.Echo) {
 			case c.Request().Method == http.MethodGet && c.Path() == "/wishlist/:slug":
 				return false
 			case c.Request().Method == http.MethodPost && c.Path() == "/wishlist/:slug/wishitem/:id/buy":
+				return false
+			case c.Request().Method == http.MethodPut && c.Path() == "/wishlist/:slug/wishitem":
+				return false
+			case c.Request().Method == http.MethodPost && c.Path() == "/wishlist/:slug/wishitem":
+				return false
+			case c.Request().Method == http.MethodDelete && c.Path() == "/wishlist/:slug/wishitem/:id":
+				return false
+			case c.Request().Method == http.MethodGet && c.Path() == "/wishlist/:slug/wishitem/:id/edit":
 				return false
 			default:
 				return true

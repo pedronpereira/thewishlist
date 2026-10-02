@@ -24,6 +24,35 @@ func TestAddItem_AppendsToExisting(t *testing.T) {
 	}
 }
 
+func TestRemoveItem_Found(t *testing.T) {
+	w := Wishlist{Items: []WishItem{{Id: "1"}, {Id: "2"}, {Id: "3"}}}
+
+	found := w.RemoveItem("2")
+
+	if !found {
+		t.Fatalf("expected RemoveItem to report found")
+	}
+	if len(w.Items) != 2 {
+		t.Fatalf("expected 2 items remaining, got %d", len(w.Items))
+	}
+	if w.Items[0].Id != "1" || w.Items[1].Id != "3" {
+		t.Fatalf("expected items 1 and 3 to remain in order, got %+v", w.Items)
+	}
+}
+
+func TestRemoveItem_NotFound(t *testing.T) {
+	w := Wishlist{Items: []WishItem{{Id: "1"}}}
+
+	found := w.RemoveItem("missing")
+
+	if found {
+		t.Fatalf("expected RemoveItem to report not found")
+	}
+	if len(w.Items) != 1 {
+		t.Fatalf("expected the untouched item to remain, got %+v", w.Items)
+	}
+}
+
 func TestIndexOf(t *testing.T) {
 	w := Wishlist{
 		Items: []WishItem{

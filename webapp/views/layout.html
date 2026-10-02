@@ -8,6 +8,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
         <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
+        <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
         <link rel="stylesheet" href="../css/index-v1.css" type="text/css" />
 
     </head>
@@ -21,6 +22,9 @@
                     <p>Os items nos retangulos cinzentos ja foram comprados.</p>
                     <p>Carrega nos links se quiseres ver a loja os podes comprar.</p>
                 </div>
+                {{ if .IsAdmin }}
+                <button type="button" class="btn-add-item" onclick="document.getElementById('add-item-dialog').showModal()">+ Adicionar Prenda</button>
+                {{ end }}
             </div>
             <hr/>
             <div class="wishlist-tabs">
@@ -37,6 +41,38 @@
             <hr />
             <h4>That's All folks! &#128123</h4>
         </div>
+
+        {{ if .IsAdmin }}
+        <dialog id="add-item-dialog" class="item-dialog">
+            <div class="dialog-header">
+                <h2>Adicionar Prenda</h2>
+                <button type="button" class="dialog-close" onclick="this.closest('dialog').close()">&#10005; Fechar</button>
+            </div>
+            <form hx-ext="json-enc" hx-put="/wishlist/{{ .CurrentSlug }}/wishitem"
+                  hx-on::after-request="if(event.detail.successful){ this.reset(); this.closest('dialog').close(); location.reload(); }">
+                <label>Nome do artigo
+                    <input type="text" name="title" placeholder="Casaco Quente" required>
+                </label>
+                <label>Descrição
+                    <textarea name="description" placeholder="Tamanho, cor, etc."></textarea>
+                </label>
+                <label>Tipo
+                    <input type="text" name="itemtype" placeholder="t-shirt, book, ...">
+                </label>
+                <label>Link da loja
+                    <input type="url" name="shopurl" placeholder="https://...">
+                </label>
+                <label>Imagem (URL)
+                    <input type="url" name="imgsource" placeholder="https://...">
+                </label>
+                <button type="submit" class="dialog-submit">[ Guardar Prenda ]</button>
+            </form>
+        </dialog>
+
+        <dialog id="edit-item-dialog" class="item-dialog">
+            <div id="edit-item-dialog-content"><!-- filled by hx-get on the edit button --></div>
+        </dialog>
+        {{ end }}
     </body>
 </html>
 

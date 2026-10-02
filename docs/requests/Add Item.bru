@@ -31,3 +31,9 @@ body:json {
               "imgSource": "https://battlesystems--live.s3.eu-west-2.amazonaws.com/uploads/2024/06/Fantasy-Dungeon-Multi-Level-Setup-2-1080x787.png"
   }
 }
+
+docs {
+  Superseded by the "+ Adicionar Prenda" UI. This route now requires
+  admin credentials and a CSRF token, so a plain request like this one
+  gets a 403 — there's no token to fetch and attach from here.
+}

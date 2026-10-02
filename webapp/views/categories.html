@@ -3,10 +3,11 @@
 {{ block "othersList" . }} {{ template "itemlist" . }} {{ end }}
 
 {{ block "itemlist" . }}
-
+<div class="wishlist-grid">
     {{ range $element := . }}
 
         {{ template "wishlistitem" $element }}
 
     {{ end }}
+</div>
 {{ end }}

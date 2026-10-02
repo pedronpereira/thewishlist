@@ -21,7 +21,60 @@
                 hx-post="/wishlist/{{ .ListSlug }}/wishitem/{{ .Id }}/buy">Comprei</button>
             </div>
             {{ end }}
+
+            {{ if .IsAdmin }}
+            <div class="wish-item-admin-ops">
+                <button type="button" class="btn-edit"
+                    hx-get="/wishlist/{{ .ListSlug }}/wishitem/{{ .Id }}/edit"
+                    hx-target="#edit-item-dialog-content"
+                    hx-swap="innerHTML"
+                    hx-on::after-request="document.getElementById('edit-item-dialog').showModal()">&#9998; Editar</button>
+                <span class="remove-confirm-trigger">
+                    <button type="button" class="btn-remove" onclick="this.closest('.wish-item-admin-ops').classList.add('confirming')">&#128465; Remover</button>
+                </span>
+                <span class="remove-confirm-actions">
+                    Tem a certeza?
+                    <button type="button" class="btn-confirm-yes"
+                        hx-delete="/wishlist/{{ .ListSlug }}/wishitem/{{ .Id }}"
+                        hx-target="#wishitem-{{ .Id }}"
+                        hx-swap="outerHTML">Sim</button>
+                    <button type="button" class="btn-confirm-no" onclick="this.closest('.wish-item-admin-ops').classList.remove('confirming')">Não</button>
+                </span>
+            </div>
+            {{ end }}
         </div>
     </div>
 {{ end }}
+{{ end }}
+
+{{ block "wishitemeditform" . }}
+<div class="dialog-header">
+    <h2>Editar Prenda</h2>
+    <button type="button" class="dialog-close" onclick="this.closest('dialog').close()">&#10005; Fechar</button>
+</div>
+<form hx-ext="json-enc" hx-post="/wishlist/{{ .ListSlug }}/wishitem"
+      hx-vals='js:{waspurchased: document.querySelector(`[name="waspurchased"]`).checked}'
+      hx-on::after-request="if(event.detail.successful){ this.closest('dialog').close(); location.reload(); }">
+    <input type="hidden" name="id" value="{{ .Id }}">
+    <label>Nome do artigo
+        <input type="text" name="title" value="{{ .Title }}" required>
+    </label>
+    <label>Descrição
+        <textarea name="description">{{ .Description }}</textarea>
+    </label>
+    <label>Tipo
+        <input type="text" name="itemtype" value="{{ .ItemType }}">
+    </label>
+    <label>Link da loja
+        <input type="url" name="shopurl" value="{{ .ShopUrl }}">
+    </label>
+    <label>Imagem (URL)
+        <input type="url" name="imgsource" value="{{ .ImgSource }}">
+    </label>
+    <label class="checkbox-label">
+        <input type="checkbox" name="waspurchased" value="true" {{ if .WasPurchased }}checked{{ end }}>
+        Já foi comprado
+    </label>
+    <button type="submit" class="dialog-submit">[ Guardar Alterações ]</button>
+</form>
 {{ end }}

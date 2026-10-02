@@ -31,3 +31,9 @@ body:json {
         "imgsource": "https://www.warhammer.com/app/resources/catalog/product/threeSixty/99070117007_Locus360/01.jpg?fm=webp&w=400"
       }
 }
+
+docs {
+  Superseded by the "Editar Prenda" UI. This route now requires admin
+  credentials and a CSRF token, so a plain request like this one gets
+  a 403 — there's no token to fetch and attach from here.
+}
