@@ -1,7 +1,7 @@
 {{ block "wishlistitem" . }}
 {{ if not .HiddenFromViewer }}
     <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}" hx-ext="morph">
-        <img src="{{ .ImgSource }}"/>
+        <img src="{{ if .ImgSource }}{{ .ImgSource }}{{ else }}/img/broHelper.png{{ end }}"/>
         <div class="wish-item-content">
             <div class="wish-item-text">
                 <p class="wish-item-title">{{ .Title }}</p>
@@ -24,13 +24,17 @@
 
             {{ if .IsAdmin }}
             <div class="wish-item-admin-ops">
-                <button type="button" class="btn-edit"
+                <button type="button" class="btn-icon btn-edit" title="Editar" aria-label="Editar"
                     hx-get="/wishlist/{{ .ListSlug }}/wishitem/{{ .Id }}/edit"
                     hx-target="#edit-item-dialog-content"
                     hx-swap="innerHTML"
-                    hx-on::after-request="document.getElementById('edit-item-dialog').showModal()">&#9998; Editar</button>
+                    hx-on::after-request="document.getElementById('edit-item-dialog').showModal()">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+                </button>
                 <span class="remove-confirm-trigger">
-                    <button type="button" class="btn-remove" onclick="this.closest('.wish-item-admin-ops').classList.add('confirming')">&#128465; Remover</button>
+                    <button type="button" class="btn-icon btn-remove" title="Remover" aria-label="Remover" onclick="this.closest('.wish-item-admin-ops').classList.add('confirming')">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+                    </button>
                 </span>
                 <span class="remove-confirm-actions">
                     Tem a certeza?
@@ -48,14 +52,15 @@
 {{ end }}
 
 {{ block "wishitemeditform" . }}
-<div class="dialog-header">
+<div class="drawer-header">
     <h2>Editar Prenda</h2>
     <button type="button" class="dialog-close" onclick="this.closest('dialog').close()">&#10005; Fechar</button>
 </div>
-<form hx-ext="json-enc" hx-post="/wishlist/{{ .ListSlug }}/wishitem"
+<form class="drawer-form" hx-ext="json-enc" hx-post="/wishlist/{{ .ListSlug }}/wishitem"
       hx-vals='js:{waspurchased: document.querySelector(`[name="waspurchased"]`).checked}'
       hx-on::after-request="if(event.detail.successful){ this.closest('dialog').close(); location.reload(); }">
     <input type="hidden" name="id" value="{{ .Id }}">
+    <input type="hidden" name="name" value="{{ .Name }}">
     <label>Nome do artigo
         <input type="text" name="title" value="{{ .Title }}" required>
     </label>
@@ -63,13 +68,16 @@
         <textarea name="description">{{ .Description }}</textarea>
     </label>
     <label>Tipo
-        <input type="text" name="itemtype" value="{{ .ItemType }}">
+        <input type="text" name="itemtype" value="{{ .ItemType }}" required>
     </label>
     <label>Link da loja
         <input type="url" name="shopurl" value="{{ .ShopUrl }}">
     </label>
+    <img class="img-preview" src="{{ if .ImgSource }}{{ .ImgSource }}{{ else }}/img/broHelper.png{{ end }}" alt="Pré-visualização"
+         onerror="if(this.src.indexOf('broHelper')<0)this.src='/img/broHelper.png'">
     <label>Imagem (URL)
-        <input type="url" name="imgsource" value="{{ .ImgSource }}">
+        <input type="url" name="imgsource" value="{{ .ImgSource }}"
+               oninput="this.form.querySelector('.img-preview').src = this.value || '/img/broHelper.png'">
     </label>
     <label class="checkbox-label">
         <input type="checkbox" name="waspurchased" value="true" {{ if .WasPurchased }}checked{{ end }}>

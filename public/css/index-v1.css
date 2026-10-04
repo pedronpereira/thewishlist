@@ -126,7 +126,16 @@ div {
     justify-content: center;
     gap: 2rem;
     padding: 0rem 2rem;
-    padding-top: 3.8rem;
+    padding-top: 2.4rem;
+}
+
+.list-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.2rem;
+    max-width: none;
 }
 
 .wishlist-tabs {
@@ -135,18 +144,65 @@ div {
     gap: 1.2rem;
 }
 
+.list-bar .wishlist-tabs {
+    width: auto;
+    max-width: none;
+}
+
+.list-bar-actions {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.8rem;
+    width: auto;
+    max-width: none;
+    margin-left: auto;
+}
+
+.list-bar-btn, .btn-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    padding: 0;
+    border: 0.1rem solid var(--divider-color);
+    border-radius: 0.8rem;
+    box-shadow: var(--shadow-minimal);
+    color: var(--text-main);
+}
+
+.btn-icon {
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 0.6rem;
+}
+
+.list-bar-btn svg {
+    width: 1.8rem;
+    height: 1.8rem;
+}
+
+.btn-icon svg {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+.list-bar-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.list-bar-btn:disabled:hover {
+    outline: none;
+    color: var(--text-main);
+}
+
 .wishlist-tab {
     background-color: var(--card-bg-color-purchased);
 }
 
 .wishlist-tab-active {
     background-color: var(--card-bg-color-available);
-}
-
-.btn-add-item {
-    background-color: var(--card-bg-color-available);
-    margin-left: auto;
-    white-space: nowrap;
 }
 
 .wish-item-false, .wish-item-true {
@@ -212,7 +268,7 @@ div {
     display: flex;
 }
 
-.btn-edit, .btn-remove, .btn-confirm-yes, .btn-confirm-no {
+.btn-confirm-yes, .btn-confirm-no {
     font-size: 1.6rem;
     padding: 0.6rem 1.6rem;
 }
@@ -273,11 +329,15 @@ dialog.item-dialog::backdrop {
 }
 
 .item-dialog form {
-    gap: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.8rem;
 }
 
 .item-dialog label {
-    gap: 0.4rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
     font-size: 1.6rem;
     font-weight: 700;
 }
@@ -302,9 +362,55 @@ dialog.item-dialog::backdrop {
     flex: none;
 }
 
+.item-dialog img.img-preview {
+    width: 14rem;
+    height: 14rem;
+    max-width: none;
+    display: block;
+    margin: 0 auto;
+    object-fit: cover;
+    border-radius: 1rem;
+    box-shadow: var(--shadow-minimal);
+}
+
 .dialog-submit {
     background-color: var(--card-bg-color-available);
+    align-self: flex-start;
     margin-top: 0.8rem;
+}
+
+dialog.item-dialog.item-drawer {
+    position: fixed;
+    width: min(40rem, 100vw);
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    inset: 0 0 0 auto;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    overflow-y: auto;
+}
+
+dialog.item-dialog.item-drawer[open] {
+    animation: drawer-slide-in 0.3s ease-out;
+}
+
+@keyframes drawer-slide-in {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+
+.drawer-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.6rem 2.4rem;
+    background-color: var(--card-bg-color-available);
+}
+
+.drawer-form {
+    padding: 2.4rem;
 }
 
 
@@ -313,10 +419,6 @@ dialog.item-dialog::backdrop {
     .wishlist-header {
         flex-direction: column;
         gap: 2rem;
-    }
-
-    .btn-add-item {
-        margin-left: 0;
     }
 
     .wish-item-false, .wish-item-true {

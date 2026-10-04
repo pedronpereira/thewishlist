@@ -34,6 +34,7 @@ func New() (*echo.Echo, error) {
 	useBasicAuth(e)
 	useCSRFProtection(e)
 	e.Static("/css", "public/css")
+	e.Static("/img", "public/img")
 
 	tmpl, err := template.ParseFS(viewsFS, "views/*.html")
 	if err != nil {

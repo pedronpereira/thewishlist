@@ -9,12 +9,12 @@
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
         <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
         <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-        <link rel="stylesheet" href="../css/index-v1.css" type="text/css" />
+        <link rel="stylesheet" href="../css/index-v1.css?v=7" type="text/css" />
 
     </head>
-    <body>
+    <body hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
         <!-- Here style for the container -->
-        <div class="wishlist-cards-container" hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
+        <div class="wishlist-cards-container">
             <div class="wishlist-header">
                 <img class="wishlist-header-avatar" src="https://avatars.githubusercontent.com/u/6302574?v=4"/>
                 <div>
@@ -22,14 +22,26 @@
                     <p>Os items nos retangulos cinzentos ja foram comprados.</p>
                     <p>Carrega nos links se quiseres ver a loja os podes comprar.</p>
                 </div>
-                {{ if .IsAdmin }}
-                <button type="button" class="btn-add-item" onclick="document.getElementById('add-item-dialog').showModal()">+ Adicionar Prenda</button>
-                {{ end }}
             </div>
             <hr/>
-            <div class="wishlist-tabs">
-                {{ range .Lists }}
-                <a class="wishlist-tab{{ if eq .Slug $.CurrentSlug }} wishlist-tab-active{{ end }}" href="/wishlist/{{ .Slug }}">{{ .Icon }} {{ .Name }} ({{ .ItemCount }})</a>
+            <div class="list-bar">
+                <div class="wishlist-tabs">
+                    {{ range .Lists }}
+                    <a class="wishlist-tab{{ if eq .Slug $.CurrentSlug }} wishlist-tab-active{{ end }}" href="/wishlist/{{ .Slug }}">{{ .Icon }} {{ .Name }} ({{ .ItemCount }})</a>
+                    {{ end }}
+                </div>
+                {{ if .IsAdmin }}
+                <div class="list-bar-actions">
+                    <button type="button" class="list-bar-btn" title="Nova lista" aria-label="Nova lista" disabled>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h10M4 18h6M18 14v8M14 18h8"/></svg>
+                    </button>
+                    <button type="button" class="list-bar-btn" title="Adicionar prenda" aria-label="Adicionar prenda" onclick="document.getElementById('add-item-dialog').showModal()">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                    <button type="button" class="list-bar-btn" title="Filtrar" aria-label="Filtrar" disabled>
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+                    </button>
+                </div>
                 {{ end }}
             </div>
             <hr/>
@@ -57,19 +69,22 @@
                     <textarea name="description" placeholder="Tamanho, cor, etc."></textarea>
                 </label>
                 <label>Tipo
-                    <input type="text" name="itemtype" placeholder="t-shirt, book, ...">
+                    <input type="text" name="itemtype" placeholder="t-shirt, book, ..." required>
                 </label>
                 <label>Link da loja
                     <input type="url" name="shopurl" placeholder="https://...">
                 </label>
+                <img class="img-preview" src="/img/broHelper.png" alt="Pré-visualização"
+                     onerror="if(this.src.indexOf('broHelper')<0)this.src='/img/broHelper.png'">
                 <label>Imagem (URL)
-                    <input type="url" name="imgsource" placeholder="https://...">
+                    <input type="url" name="imgsource" placeholder="https://..."
+                           oninput="this.form.querySelector('.img-preview').src = this.value || '/img/broHelper.png'">
                 </label>
                 <button type="submit" class="dialog-submit">[ Guardar Prenda ]</button>
             </form>
         </dialog>
 
-        <dialog id="edit-item-dialog" class="item-dialog">
+        <dialog id="edit-item-dialog" class="item-dialog item-drawer" onclick="if(event.target===this) this.close()">
             <div id="edit-item-dialog-content"><!-- filled by hx-get on the edit button --></div>
         </dialog>
         {{ end }}

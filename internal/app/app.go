@@ -165,7 +165,7 @@ type wishlistView struct {
 	CSRFToken   string
 	Lists       []domain.List // for the tab bar; Slug == CurrentSlug marks the active pill
 	CurrentSlug string
-	IsAdmin     bool // controls the page-level "+ Adicionar Prenda" button
+	IsAdmin     bool // controls the admin-only list bar buttons
 }
 
 func newWishlistView(w domain.Wishlist, isAdmin bool, list domain.List) wishlistView {
