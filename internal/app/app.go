@@ -303,6 +303,14 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 		return handleStoreError(err)
 	}
 
+	// UpdateItem replaces the whole item, so a request that omits name
+	// would otherwise blank it. Keep the stored name in that case.
+	if requestItem.Name == "" {
+		if index := wishlist.IndexOf(requestItem); index != -1 {
+			requestItem.Name = wishlist.Items[index].Name
+		}
+	}
+
 	if _, err := wishlist.UpdateItem(requestItem); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
 	}

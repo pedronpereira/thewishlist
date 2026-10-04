@@ -555,3 +555,42 @@ func TestCSRF_DeleteItemFlow(t *testing.T) {
 		t.Fatalf("expected 200 for a correctly matched CSRF token, got %d: %s", rec4.Code, rec4.Body.String())
 	}
 }
+
+// TestUpdateWishItemHandler_KeepsNameWhenOmitted guards against an update
+// blanking an item's internal name: UpdateItem replaces the whole item, so a
+// request without name must keep the stored one.
+func TestUpdateWishItemHandler_KeepsNameWhenOmitted(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	updated := `{"id":"p1","title":"Renamed","itemtype":"t-shirt"}`
+	rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/pedro/wishitem", testAdminUser, testAdminPass, updated)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("update: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist", testAdminUser, testAdminPass, "")
+	var export struct {
+		Lists []struct {
+			Slug  string `json:"slug"`
+			Items []struct {
+				Id    string `json:"id"`
+				Name  string `json:"name"`
+				Title string `json:"title"`
+			} `json:"items"`
+		} `json:"lists"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &export); err != nil {
+		t.Fatalf("unmarshaling export: %v", err)
+	}
+	for _, l := range export.Lists {
+		for _, item := range l.Items {
+			if item.Id == "p1" {
+				if item.Title != "Renamed" || item.Name != "item1" {
+					t.Fatalf("expected title Renamed and name item1 kept, got title %q name %q", item.Title, item.Name)
+				}
+				return
+			}
+		}
+	}
+	t.Fatalf("item p1 not found in export")
+}
