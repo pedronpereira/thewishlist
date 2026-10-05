@@ -39,3 +39,6 @@ docs/requests/environments
 # Internal planning/architecture notes - not meant for the public repo
 docs/todo.md
 docs/design.md
+
+# Adoc-mocks for the app - not meant for the public repo
+mocks/
