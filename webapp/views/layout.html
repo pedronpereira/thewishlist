@@ -9,7 +9,7 @@
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
         <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
         <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-        <link rel="stylesheet" href="../css/index-v1.css?v=7" type="text/css" />
+        <link rel="stylesheet" href="../css/index-v1.css?v=8" type="text/css" />
 
     </head>
     <body hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
@@ -80,6 +80,7 @@
                     <input type="url" name="imgsource" placeholder="https://..."
                            oninput="this.form.querySelector('.img-preview').src = this.value || '/img/broHelper.png'">
                 </label>
+                <p class="form-error" role="alert" hidden></p>
                 <button type="submit" class="dialog-submit">[ Guardar Prenda ]</button>
             </form>
         </dialog>
@@ -88,6 +89,19 @@
             <div id="edit-item-dialog-content"><!-- filled by hx-get on the edit button --></div>
         </dialog>
         {{ end }}
+
+        <div id="error-banner" role="alert" hidden></div>
+        <script>
+            function showRequestError(event) {
+                var message = 'Não foi possível concluir a ação. Tenta novamente.';
+                var dialog = event.detail.elt.closest('dialog');
+                var target = dialog ? dialog.querySelector('.form-error') : document.getElementById('error-banner');
+                target.textContent = message;
+                target.hidden = false;
+            }
+            document.body.addEventListener('htmx:responseError', showRequestError);
+            document.body.addEventListener('htmx:sendError', showRequestError);
+        </script>
     </body>
 </html>
 

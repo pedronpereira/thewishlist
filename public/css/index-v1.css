@@ -414,6 +414,35 @@ dialog.item-dialog.item-drawer[open] {
 }
 
 
+[hidden] {
+    display: none !important;
+}
+
+.form-error {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--text-button-active);
+}
+
+#error-banner {
+    position: fixed;
+    left: 50%;
+    bottom: 2rem;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: 90vw;
+    z-index: 1000;
+    padding: 1.2rem 2.4rem;
+    border-radius: 99rem;
+    background-color: var(--text-button-active);
+    box-shadow: var(--shadow-default);
+    color: #ffffff;
+    font-size: 1.6rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+
 /* ----------------------------- MEDIA QUERIES ----------------------------- */
 @media screen and (max-width: 560px) {
     .wishlist-header {

@@ -83,6 +83,7 @@
         <input type="checkbox" name="waspurchased" value="true" {{ if .WasPurchased }}checked{{ end }}>
         Já foi comprado
     </label>
+    <p class="form-error" role="alert" hidden></p>
     <button type="submit" class="dialog-submit">[ Guardar Alterações ]</button>
 </form>
 {{ end }}
