@@ -127,6 +127,8 @@ func useCSRFProtection(e *echo.Echo) {
 				return false
 			case c.Request().Method == http.MethodGet && c.Path() == "/wishlist/:slug/wishitem/:id/edit":
 				return false
+			case c.Request().Method == http.MethodPost && c.Path() == "/wishlist/lists":
+				return false
 			default:
 				return true
 			}

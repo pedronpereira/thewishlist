@@ -9,7 +9,7 @@
         <script src="https://unpkg.com/htmx.org@2.0.3"></script>
         <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
         <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-        <link rel="stylesheet" href="../css/index-v1.css?v=8" type="text/css" />
+        <link rel="stylesheet" href="../css/index-v1.css?v=9" type="text/css" />
 
     </head>
     <body hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
@@ -30,27 +30,32 @@
                     <a class="wishlist-tab{{ if eq .Slug $.CurrentSlug }} wishlist-tab-active{{ end }}" href="/wishlist/{{ .Slug }}">{{ .Icon }} {{ .Name }} ({{ .ItemCount }})</a>
                     {{ end }}
                 </div>
-                {{ if .IsAdmin }}
                 <div class="list-bar-actions">
-                    <button type="button" class="list-bar-btn" title="Nova lista" aria-label="Nova lista" disabled>
+                    <details class="filter-menu">
+                        <summary class="list-bar-btn" title="Filtrar" aria-label="Filtrar">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+                        </summary>
+                        <div class="filter-menu-items">
+                            <a href="/wishlist/{{ .CurrentSlug }}" class="{{ if eq .Filter "" }}filter-active{{ end }}">Todos os tipos ({{ .AllCount }})</a>
+                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=t-shirt" class="{{ if eq .Filter "t-shirt" }}filter-active{{ end }}">T-shirts ({{ .TshirtCount }})</a>
+                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=book" class="{{ if eq .Filter "book" }}filter-active{{ end }}">Livros ({{ .BookCount }})</a>
+                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=outros" class="{{ if eq .Filter "outros" }}filter-active{{ end }}">Outros ({{ .OtherCount }})</a>
+                        </div>
+                    </details>
+                    {{ if .IsAdmin }}
+                    <button type="button" class="list-bar-btn" title="Nova lista" aria-label="Nova lista" onclick="document.getElementById('add-list-dialog').showModal()">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h10M4 18h6M18 14v8M14 18h8"/></svg>
                     </button>
                     <button type="button" class="list-bar-btn" title="Adicionar prenda" aria-label="Adicionar prenda" onclick="document.getElementById('add-item-dialog').showModal()">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
                     </button>
-                    <button type="button" class="list-bar-btn" title="Filtrar" aria-label="Filtrar" disabled>
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
-                    </button>
+                    {{ end }}
                 </div>
-                {{ end }}
             </div>
             <hr/>
-            {{ template "tshirtList" .Tshirts}}
-            <hr/>
-            {{ template "booksList" .Books}}
-            <hr />
-            {{ template "othersList" .Other}}
-            <hr />
+            {{ if .Tshirts }}{{ template "tshirtList" .Tshirts }}<hr/>{{ end }}
+            {{ if .Books }}{{ template "booksList" .Books }}<hr/>{{ end }}
+            {{ if .Other }}{{ template "othersList" .Other }}<hr/>{{ end }}
             <h4>That's All folks! &#128123</h4>
         </div>
 
@@ -85,6 +90,28 @@
             </form>
         </dialog>
 
+        <dialog id="add-list-dialog" class="item-dialog">
+            <div class="dialog-header">
+                <h2>Nova Lista</h2>
+                <button type="button" class="dialog-close" onclick="this.closest('dialog').close()">&#10005; Fechar</button>
+            </div>
+            <form hx-ext="json-enc" hx-post="/wishlist/lists"
+                  hx-vals='js:{hidefromadmin: document.querySelector("#add-list-dialog [name=hidefromadmin]").checked}'>
+                <label>Nome da lista
+                    <input type="text" name="name" placeholder="Natal 2026" required>
+                </label>
+                <label>Ícone
+                    <input type="text" name="icon" placeholder="🎁">
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" name="hidefromadmin" value="true">
+                    Esconder compras ao admin
+                </label>
+                <p class="form-error" role="alert" hidden></p>
+                <button type="submit" class="dialog-submit">[ Criar Lista ]</button>
+            </form>
+        </dialog>
+
         <dialog id="edit-item-dialog" class="item-dialog item-drawer" onclick="if(event.target===this) this.close()">
             <div id="edit-item-dialog-content"><!-- filled by hx-get on the edit button --></div>
         </dialog>
@@ -94,6 +121,10 @@
         <script>
             function showRequestError(event) {
                 var message = 'Não foi possível concluir a ação. Tenta novamente.';
+                var xhr = event.detail.xhr;
+                if (xhr && (xhr.status === 400 || xhr.status === 409)) {
+                    try { message = JSON.parse(xhr.responseText).message || message; } catch (e) {}
+                }
                 var dialog = event.detail.elt.closest('dialog');
                 var target = dialog ? dialog.querySelector('.form-error') : document.getElementById('error-banner');
                 target.textContent = message;
@@ -101,6 +132,11 @@
             }
             document.body.addEventListener('htmx:responseError', showRequestError);
             document.body.addEventListener('htmx:sendError', showRequestError);
+            document.addEventListener('click', function (event) {
+                document.querySelectorAll('details.filter-menu[open]').forEach(function (menu) {
+                    if (!menu.contains(event.target)) menu.open = false;
+                });
+            });
         </script>
     </body>
 </html>

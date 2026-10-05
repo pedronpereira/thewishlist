@@ -233,3 +233,24 @@ func TestPostgresStore_LoadAllAndReplaceAll(t *testing.T) {
 		t.Fatalf("expected the old 'pedro' list to be gone after ReplaceAll, got %v", err)
 	}
 }
+
+func TestPostgresStore_CreateList(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.CreateList(domain.List{Slug: "natal", Name: "Natal", Icon: "🎄"}); err != nil {
+		t.Fatalf("creating list: %v", err)
+	}
+
+	got, err := store.GetList("natal")
+	if err != nil {
+		t.Fatalf("getting created list: %v", err)
+	}
+	if got.Name != "Natal" || got.Icon != "🎄" {
+		t.Fatalf("unexpected created list: %+v", got)
+	}
+
+	err = store.CreateList(domain.List{Slug: "natal", Name: "Again"})
+	if !errors.Is(err, ErrListExists) {
+		t.Fatalf("expected ErrListExists for a duplicate slug, got %v", err)
+	}
+}

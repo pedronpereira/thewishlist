@@ -65,6 +65,8 @@ func (a *app) RegisterHandlers(e *echo.Echo) {
 	e.GET("/wishlist/:slug/wishitem/:id/edit", a.editWishItemFormHandler)
 	//admin-only: remove an item from a list
 	e.DELETE("/wishlist/:slug/wishitem/:id", a.deleteWishItemHandler)
+	//admin-only: create an empty list
+	e.POST("/wishlist/lists", a.createListHandler)
 }
 
 // handleStoreError translates a missing-list error into a 404 instead of a
@@ -156,8 +158,41 @@ func newItemView(item domain.WishItem, isAdmin bool, list domain.List) itemView 
 	}
 }
 
+// Filter values accepted in the ?tipo= query parameter. Anything else is
+// treated as no filter.
+const (
+	filterTshirt = "t-shirt"
+	filterBook   = "book"
+	filterOther  = "outros"
+)
+
+// normalizeFilter keeps only a recognised ?tipo= value; anything else means
+// no filter, so a stray or old link still shows the whole list.
+func normalizeFilter(tipo string) string {
+	switch tipo {
+	case filterTshirt, filterBook, filterOther:
+		return tipo
+	}
+	return ""
+}
+
+// bucketOf maps an item type onto the filter bucket it belongs to. Every
+// type that isn't t-shirt or book falls into "outros".
+func bucketOf(itemType string) string {
+	switch itemType {
+	case filterTshirt:
+		return filterTshirt
+	case filterBook:
+		return filterBook
+	default:
+		return filterOther
+	}
+}
+
 // wishlistView reproduces the Tshirts/Books/Other categorization the
 // template expects, derived at render time from the flat Items collection.
+// When Filter is set, only that bucket's items are filled in; the counts
+// always describe the whole list so the filter menu can show them.
 type wishlistView struct {
 	Tshirts     []itemView
 	Books       []itemView
@@ -166,16 +201,35 @@ type wishlistView struct {
 	Lists       []domain.List // for the tab bar; Slug == CurrentSlug marks the active pill
 	CurrentSlug string
 	IsAdmin     bool // controls the admin-only list bar buttons
+	Filter      string
+	AllCount    int
+	TshirtCount int
+	BookCount   int
+	OtherCount  int
 }
 
-func newWishlistView(w domain.Wishlist, isAdmin bool, list domain.List) wishlistView {
-	view := wishlistView{IsAdmin: isAdmin}
+func newWishlistView(w domain.Wishlist, isAdmin bool, list domain.List, filter string) wishlistView {
+	view := wishlistView{IsAdmin: isAdmin, Filter: filter}
 	for _, item := range w.Items {
+		bucket := bucketOf(item.ItemType)
+		view.AllCount++
+		switch bucket {
+		case filterTshirt:
+			view.TshirtCount++
+		case filterBook:
+			view.BookCount++
+		default:
+			view.OtherCount++
+		}
+
+		if filter != "" && filter != bucket {
+			continue
+		}
 		iv := newItemView(item, isAdmin, list)
-		switch item.ItemType {
-		case "t-shirt":
+		switch bucket {
+		case filterTshirt:
 			view.Tshirts = append(view.Tshirts, iv)
-		case "book":
+		case filterBook:
 			view.Books = append(view.Books, iv)
 		default:
 			view.Other = append(view.Other, iv)
@@ -228,7 +282,7 @@ func (a *app) getListPageHandler(c echo.Context) error {
 	currentList := findList(lists, slug)
 
 	isAdmin, _ := c.Get("isAdmin").(bool)
-	view := newWishlistView(wishlist, isAdmin, currentList)
+	view := newWishlistView(wishlist, isAdmin, currentList, normalizeFilter(c.QueryParam("tipo")))
 	view.Lists = lists
 	view.CurrentSlug = slug
 	if token, ok := c.Get(middleware.DefaultCSRFConfig.ContextKey).(string); ok {
@@ -320,6 +374,88 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, requestItem)
+}
+
+// reservedListSlugs are routes already claimed under /wishlist/, so a list
+// with one of these slugs could never be opened.
+var reservedListSlugs = map[string]bool{
+	"refresh": true,
+	"lists":   true,
+}
+
+var accentReplacer = strings.NewReplacer(
+	"á", "a", "à", "a", "â", "a", "ã", "a", "ä", "a",
+	"é", "e", "è", "e", "ê", "e", "ë", "e",
+	"í", "i", "ì", "i", "î", "i", "ï", "i",
+	"ó", "o", "ò", "o", "ô", "o", "õ", "o", "ö", "o",
+	"ú", "u", "ù", "u", "û", "u", "ü", "u",
+	"ç", "c",
+)
+
+// deriveListSlug turns a list name into a URL segment: lowercase ASCII
+// letters and digits, with runs of anything else collapsed to a single
+// hyphen. "Natal 2026 — Família" becomes "natal-2026-familia".
+func deriveListSlug(name string) string {
+	var b strings.Builder
+	pendingHyphen := false
+	for _, r := range accentReplacer.Replace(strings.ToLower(name)) {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			if pendingHyphen && b.Len() > 0 {
+				b.WriteByte('-')
+			}
+			b.WriteRune(r)
+			pendingHyphen = false
+		} else {
+			pendingHyphen = true
+		}
+	}
+	return b.String()
+}
+
+func (a *app) createListHandler(c echo.Context) error {
+	if err := requireAdmin(c); err != nil {
+		return err
+	}
+
+	var request struct {
+		Name          string `json:"name"`
+		Icon          string `json:"icon"`
+		HideFromAdmin bool   `json:"hidefromadmin"`
+	}
+	if err := c.Bind(&request); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+	}
+
+	name := strings.TrimSpace(request.Name)
+	if name == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "Indica um nome para a lista.")
+	}
+
+	slug := deriveListSlug(name)
+	if slug == "" || reservedListSlugs[slug] {
+		return echo.NewHTTPError(http.StatusBadRequest, "Este nome não pode ser usado para uma lista.")
+	}
+
+	icon := strings.TrimSpace(request.Icon)
+	if icon == "" {
+		icon = "🎁"
+	}
+
+	list := domain.List{
+		Slug:             slug,
+		Name:             name,
+		Icon:             icon,
+		IsAdminRecipient: request.HideFromAdmin,
+	}
+	if err := a.store.CreateList(list); err != nil {
+		if errors.Is(err, storage.ErrListExists) {
+			return echo.NewHTTPError(http.StatusConflict, "Já existe uma lista com esse nome.")
+		}
+		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
+	}
+
+	c.Response().Header().Set("HX-Redirect", "/wishlist/"+slug)
+	return c.NoContent(http.StatusOK)
 }
 
 func (a *app) getFullWishListHandler(c echo.Context) error {

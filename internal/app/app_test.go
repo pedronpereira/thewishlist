@@ -87,6 +87,8 @@ func newTestServer(t *testing.T, lists []domain.ListWithItems) *echo.Echo {
 				return false
 			case c.Request().Method == http.MethodGet && c.Path() == "/wishlist/:slug/wishitem/:id/edit":
 				return false
+			case c.Request().Method == http.MethodPost && c.Path() == "/wishlist/lists":
+				return false
 			default:
 				return true
 			}
@@ -593,4 +595,168 @@ func TestUpdateWishItemHandler_KeepsNameWhenOmitted(t *testing.T) {
 		}
 	}
 	t.Fatalf("item p1 not found in export")
+}
+
+func TestCreateListHandler_CreatesListAndRedirects(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	body := `{"name":"Natal 2026","icon":"🎄"}`
+	rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/lists", testAdminUser, testAdminPass, body)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if loc := rec.Header().Get("HX-Redirect"); loc != "/wishlist/natal-2026" {
+		t.Fatalf("expected HX-Redirect to /wishlist/natal-2026, got %q", loc)
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/natal-2026", testFamilyUser, testFamilyPass, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("new list page: expected 200, got %d", rec.Code)
+	}
+}
+
+func TestCreateListHandler_DefaultsIconWhenBlank(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/lists", testAdminUser, testAdminPass, `{"name":"Viagem"}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("create: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist", testFamilyUser, testFamilyPass, "")
+	if !strings.Contains(rec.Body.String(), `"icon":"🎁"`) {
+		t.Fatalf("expected the new list to default to the 🎁 icon, got %s", rec.Body.String())
+	}
+}
+
+func TestCreateListHandler_RejectsBadInput(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want int
+	}{
+		{"empty name", `{"name":"   "}`, http.StatusBadRequest},
+		{"name with no letters or digits", `{"name":"!!!"}`, http.StatusBadRequest},
+		{"reserved slug", `{"name":"Refresh"}`, http.StatusBadRequest},
+		{"duplicate of existing list", `{"name":"Pedro"}`, http.StatusConflict},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := newTestServer(t, testLists())
+			rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/lists", testAdminUser, testAdminPass, tt.body)
+			if rec.Code != tt.want {
+				t.Fatalf("expected %d, got %d: %s", tt.want, rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestCreateListHandler_FamilyIsForbidden(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/lists", testFamilyUser, testFamilyPass, `{"name":"Natal"}`)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for family credentials, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestCSRF_CreateListFlow(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doRequest(e, http.MethodGet, "/wishlist/pedro", testAdminUser, testAdminPass, "")
+	cookies := rec.Result().Cookies()
+
+	req := httptest.NewRequest(http.MethodPost, "/wishlist/lists", strings.NewReader(`{"name":"Natal"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(testAdminUser, testAdminPass)
+	rec2 := httptest.NewRecorder()
+	e.ServeHTTP(rec2, req)
+	if rec2.Code == http.StatusOK {
+		t.Fatalf("expected create without a CSRF token to be rejected, got 200")
+	}
+
+	match := csrfTokenRe.FindStringSubmatch(rec.Body.String())
+	if match == nil {
+		t.Fatalf("expected a CSRFToken in the rendered page")
+	}
+	req = httptest.NewRequest(http.MethodPost, "/wishlist/lists", strings.NewReader(`{"name":"Natal"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.SetBasicAuth(testAdminUser, testAdminPass)
+	for _, c := range cookies {
+		req.AddCookie(c)
+	}
+	req.Header.Set("X-CSRF-Token", match[1])
+	rec3 := httptest.NewRecorder()
+	e.ServeHTTP(rec3, req)
+	if rec3.Code != http.StatusOK {
+		t.Fatalf("expected 200 with a matching CSRF token, got %d: %s", rec3.Code, rec3.Body.String())
+	}
+}
+
+func TestDeriveListSlug(t *testing.T) {
+	tests := map[string]string{
+		"Natal 2026":            "natal-2026",
+		"  Lista de Família!! ": "lista-de-familia",
+		"Pedro's wife":          "pedro-s-wife",
+		"Ç":                     "c",
+		"---":                   "",
+	}
+	for name, want := range tests {
+		if got := deriveListSlug(name); got != want {
+			t.Errorf("deriveListSlug(%q) = %q, want %q", name, got, want)
+		}
+	}
+}
+
+// listPageView mirrors wishlistView's fields as the test renderer serializes
+// them (Go field names, no JSON tags).
+type listPageView struct {
+	Tshirts     []struct{ Id string }
+	Books       []struct{ Id string }
+	Other       []struct{ Id string }
+	Filter      string
+	AllCount    int
+	TshirtCount int
+	BookCount   int
+	OtherCount  int
+}
+
+func TestListPageFilter(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	tests := []struct {
+		name       string
+		query      string
+		wantTshirt int
+		wantBook   int
+		wantOther  int
+	}{
+		{"no filter shows everything", "", 1, 1, 0},
+		{"book filter", "?tipo=book", 0, 1, 0},
+		{"t-shirt filter", "?tipo=t-shirt", 1, 0, 0},
+		{"outros filter", "?tipo=outros", 0, 0, 0},
+		{"unknown filter is ignored", "?tipo=bogus", 1, 1, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := doRequest(e, http.MethodGet, "/wishlist/pedro"+tt.query, testFamilyUser, testFamilyPass, "")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d", rec.Code)
+			}
+			var view listPageView
+			if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+				t.Fatalf("unmarshaling view: %v", err)
+			}
+			if len(view.Tshirts) != tt.wantTshirt || len(view.Books) != tt.wantBook || len(view.Other) != tt.wantOther {
+				t.Fatalf("shown t-shirts/books/other = %d/%d/%d, want %d/%d/%d",
+					len(view.Tshirts), len(view.Books), len(view.Other), tt.wantTshirt, tt.wantBook, tt.wantOther)
+			}
+			if view.AllCount != 2 || view.TshirtCount != 1 || view.BookCount != 1 || view.OtherCount != 0 {
+				t.Fatalf("counts should describe the whole list, got all=%d tshirt=%d book=%d other=%d",
+					view.AllCount, view.TshirtCount, view.BookCount, view.OtherCount)
+			}
+		})
+	}
 }

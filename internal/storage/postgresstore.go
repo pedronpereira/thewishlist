@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pedronpereira/thewishlist/internal/domain"
 )
@@ -236,6 +237,24 @@ func (s *PostgresStore) LoadAll() ([]domain.ListWithItems, error) {
 	}
 
 	return result, nil
+}
+
+func (s *PostgresStore) CreateList(list domain.List) error {
+	ctx := context.Background()
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO lists (slug, name, icon, is_admin_recipient, is_default) VALUES ($1, $2, $3, $4, FALSE)`,
+		list.Slug, list.Name, list.Icon, list.IsAdminRecipient,
+	)
+
+	// 23505 is Postgres's unique_violation: the slug column is UNIQUE.
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return fmt.Errorf("list %q: %w", list.Slug, ErrListExists)
+	}
+	if err != nil {
+		return fmt.Errorf("inserting list %q: %w", list.Slug, err)
+	}
+	return nil
 }
 
 func (s *PostgresStore) ReplaceAll(lists []domain.ListWithItems) error {

@@ -24,14 +24,20 @@ type Store interface {
 	SaveList(slug string, w domain.Wishlist) error
 
 	// LoadAll and ReplaceAll operate across every list at once, for the
-	// bulk GET/POST /wishlist export/import endpoints. ReplaceAll is also
-	// the only way to introduce a brand-new list until list-creation UI
-	// (Phase 3) exists.
+	// bulk GET/POST /wishlist export/import endpoints.
 	LoadAll() ([]domain.ListWithItems, error)
 	ReplaceAll(lists []domain.ListWithItems) error
+
+	// CreateList adds an empty list. It returns ErrListExists if the slug is
+	// already taken, so the caller can report a conflict rather than a
+	// generic failure.
+	CreateList(list domain.List) error
 }
 
-var ErrListNotFound = errors.New("list not found")
+var (
+	ErrListNotFound = errors.New("list not found")
+	ErrListExists   = errors.New("list already exists")
+)
 
 func NewFileStore(path string) *FileStore {
 	return &FileStore{

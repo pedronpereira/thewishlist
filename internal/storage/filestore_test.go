@@ -190,3 +190,26 @@ func TestFileStore_LoadAllAndReplaceAll(t *testing.T) {
 		t.Fatalf("expected the old 'pedro' list to be gone after ReplaceAll, got %v", err)
 	}
 }
+
+func TestFileStore_CreateList(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro", IsDefault: true}},
+	})
+
+	if err := fs.CreateList(domain.List{Slug: "natal", Name: "Natal", Icon: "🎄"}); err != nil {
+		t.Fatalf("creating list: %v", err)
+	}
+
+	got, err := fs.GetList("natal")
+	if err != nil {
+		t.Fatalf("getting created list: %v", err)
+	}
+	if got.Name != "Natal" || got.Icon != "🎄" || got.ItemCount != 0 {
+		t.Fatalf("unexpected created list: %+v", got)
+	}
+
+	err = fs.CreateList(domain.List{Slug: "natal", Name: "Again"})
+	if !errors.Is(err, ErrListExists) {
+		t.Fatalf("expected ErrListExists for a duplicate slug, got %v", err)
+	}
+}

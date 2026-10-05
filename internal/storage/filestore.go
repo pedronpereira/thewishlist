@@ -121,3 +121,19 @@ func (fs *FileStore) LoadAll() ([]domain.ListWithItems, error) {
 func (fs *FileStore) ReplaceAll(lists []domain.ListWithItems) error {
 	return fs.writeAll(fileFormat{Lists: lists})
 }
+
+func (fs *FileStore) CreateList(list domain.List) error {
+	all, err := fs.readAll()
+	if err != nil {
+		return err
+	}
+
+	for _, l := range all.Lists {
+		if l.Slug == list.Slug {
+			return fmt.Errorf("list %q: %w", list.Slug, ErrListExists)
+		}
+	}
+
+	all.Lists = append(all.Lists, domain.ListWithItems{List: list, Items: []domain.WishItem{}})
+	return fs.writeAll(all)
+}

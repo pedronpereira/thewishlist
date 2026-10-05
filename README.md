@@ -4,7 +4,7 @@ This small repository contains a simple website that shows a list of presents fo
 
 The app supports multiple named lists (e.g. `/wishlist/pedro`, `/wishlist/wife`), switchable via a tab bar in the header.
 
-An admin login can add, edit, and remove items directly in the browser. Other logins can browse the lists and mark items as bought.
+An admin login can add, edit, and remove items and create new lists directly in the browser. Other logins can browse the lists, filter them by item type, and mark items as bought.
 
 ## Running the app
 
