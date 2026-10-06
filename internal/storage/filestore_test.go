@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -211,5 +212,36 @@ func TestFileStore_CreateList(t *testing.T) {
 	err = fs.CreateList(domain.List{Slug: "natal", Name: "Again"})
 	if !errors.Is(err, ErrListExists) {
 		t.Fatalf("expected ErrListExists for a duplicate slug, got %v", err)
+	}
+}
+
+func TestFileStore_WriteLeavesOnlyTheWishlistFile(t *testing.T) {
+	dir := t.TempDir()
+	fs := &FileStore{path: filepath.Join(dir, "wishlist.json")}
+	if err := fs.ReplaceAll([]domain.ListWithItems{{List: domain.List{Slug: "pedro", Name: "Pedro"}}}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+	if err := fs.CreateList(domain.List{Slug: "natal", Name: "Natal"}); err != nil {
+		t.Fatalf("creating list: %v", err)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading dir: %v", err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "wishlist.json" {
+		names := make([]string, 0, len(entries))
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Fatalf("expected only wishlist.json in the directory, found %v", names)
+	}
+
+	all, err := fs.LoadAll()
+	if err != nil {
+		t.Fatalf("loading: %v", err)
+	}
+	if len(all) != 2 {
+		t.Fatalf("expected 2 lists after the save, got %d", len(all))
 	}
 }

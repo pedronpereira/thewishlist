@@ -1,0 +1,10 @@
+{
+  "name": "thewishlist-frontend",
+  "private": true,
+  "description": "Pins the browser scripts vendored into public/js. Nothing is installed or built from this file; it exists so Dependabot can report new versions and security advisories.",
+  "dependencies": {
+    "htmx.org": "2.0.3",
+    "idiomorph": "0.3.0",
+    "htmx-ext-json-enc": "2.0.1"
+  }
+}

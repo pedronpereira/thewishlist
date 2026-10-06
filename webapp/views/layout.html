@@ -6,10 +6,10 @@
         <title>Pedro's Wishlist</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://unpkg.com/htmx.org@2.0.3"></script>
-        <script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js"></script>
-        <script src="https://unpkg.com/htmx-ext-json-enc@2.0.1/json-enc.js"></script>
-        <link rel="stylesheet" href="../css/index-v1.css?v=9" type="text/css" />
+        <script src="/js/htmx-2.0.3.min.js"></script>
+        <script src="/js/idiomorph-ext-0.3.0.min.js"></script>
+        <script src="/js/htmx-ext-json-enc-2.0.1.js"></script>
+        <link rel="stylesheet" href="../css/index-v1.css?v=10" type="text/css" />
 
     </head>
     <body hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
@@ -60,12 +60,12 @@
         </div>
 
         {{ if .IsAdmin }}
-        <dialog id="add-item-dialog" class="item-dialog">
-            <div class="dialog-header">
+        <dialog id="add-item-dialog" class="item-dialog item-drawer" onclick="if(event.target===this) this.close()">
+            <div class="drawer-header">
                 <h2>Adicionar Prenda</h2>
                 <button type="button" class="dialog-close" onclick="this.closest('dialog').close()">&#10005; Fechar</button>
             </div>
-            <form hx-ext="json-enc" hx-put="/wishlist/{{ .CurrentSlug }}/wishitem"
+            <form class="drawer-form" hx-ext="json-enc" hx-put="/wishlist/{{ .CurrentSlug }}/wishitem"
                   hx-on::after-request="if(event.detail.successful){ this.reset(); this.closest('dialog').close(); location.reload(); }">
                 <label>Nome do artigo
                     <input type="text" name="title" placeholder="Casaco Quente" required>

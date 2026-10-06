@@ -35,6 +35,7 @@ func New() (*echo.Echo, error) {
 	useCSRFProtection(e)
 	e.Static("/css", "public/css")
 	e.Static("/img", "public/img")
+	e.Static("/js", "public/js")
 
 	tmpl, err := template.ParseFS(viewsFS, "views/*.html")
 	if err != nil {

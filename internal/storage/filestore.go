@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/pedronpereira/thewishlist/internal/domain"
 )
@@ -32,14 +33,39 @@ func (fs *FileStore) readAll() (fileFormat, error) {
 	return payload, nil
 }
 
+// writeAll replaces the file atomically: the new contents go to a temp file
+// in the same directory, are flushed to disk, and only then renamed over the
+// real file. A crash mid-write leaves the previous file intact instead of a
+// truncated one.
 func (fs *FileStore) writeAll(payload fileFormat) error {
 	buf, err := json.MarshalIndent(payload, "", "    ")
 	if err != nil {
 		return fmt.Errorf("marshaling wishlist file: %w", err)
 	}
 
-	if err := os.WriteFile(fs.path, buf, 0644); err != nil {
-		return fmt.Errorf("writing wishlist file %q: %w", fs.path, err)
+	tmp, err := os.CreateTemp(filepath.Dir(fs.path), filepath.Base(fs.path)+".*.tmp")
+	if err != nil {
+		return fmt.Errorf("creating temp file for %q: %w", fs.path, err)
+	}
+	tmpPath := tmp.Name()
+	defer os.Remove(tmpPath) // only does anything if the rename below never happened
+
+	if _, err := tmp.Write(buf); err != nil {
+		tmp.Close()
+		return fmt.Errorf("writing temp file %q: %w", tmpPath, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return fmt.Errorf("flushing temp file %q: %w", tmpPath, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("closing temp file %q: %w", tmpPath, err)
+	}
+	if err := os.Chmod(tmpPath, 0644); err != nil {
+		return fmt.Errorf("setting permissions on %q: %w", tmpPath, err)
+	}
+	if err := os.Rename(tmpPath, fs.path); err != nil {
+		return fmt.Errorf("replacing wishlist file %q: %w", fs.path, err)
 	}
 
 	return nil
