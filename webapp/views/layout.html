@@ -9,7 +9,7 @@
         <script src="/js/htmx-2.0.3.min.js"></script>
         <script src="/js/idiomorph-ext-0.3.0.min.js"></script>
         <script src="/js/htmx-ext-json-enc-2.0.1.js"></script>
-        <link rel="stylesheet" href="../css/index-v1.css?v=10" type="text/css" />
+        <link rel="stylesheet" href="../css/index-v1.css?v=12" type="text/css" />
 
     </head>
     <body hx-headers='{"X-CSRF-Token": "{{ .CSRFToken }}"}'>
@@ -30,33 +30,51 @@
                     <a class="wishlist-tab{{ if eq .Slug $.CurrentSlug }} wishlist-tab-active{{ end }}" href="/wishlist/{{ .Slug }}">{{ .Icon }} {{ .Name }} ({{ .ItemCount }})</a>
                     {{ end }}
                 </div>
-                <div class="list-bar-actions">
-                    <details class="filter-menu">
-                        <summary class="list-bar-btn" title="Filtrar" aria-label="Filtrar">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
-                        </summary>
-                        <div class="filter-menu-items">
-                            <a href="/wishlist/{{ .CurrentSlug }}" class="{{ if eq .Filter "" }}filter-active{{ end }}">Todos os tipos ({{ .AllCount }})</a>
-                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=t-shirt" class="{{ if eq .Filter "t-shirt" }}filter-active{{ end }}">T-shirts ({{ .TshirtCount }})</a>
-                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=book" class="{{ if eq .Filter "book" }}filter-active{{ end }}">Livros ({{ .BookCount }})</a>
-                            <a href="/wishlist/{{ .CurrentSlug }}?tipo=outros" class="{{ if eq .Filter "outros" }}filter-active{{ end }}">Outros ({{ .OtherCount }})</a>
-                        </div>
-                    </details>
-                    {{ if .IsAdmin }}
-                    <button type="button" class="list-bar-btn" title="Nova lista" aria-label="Nova lista" onclick="document.getElementById('add-list-dialog').showModal()">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h10M4 18h6M18 14v8M14 18h8"/></svg>
-                    </button>
-                    <button type="button" class="list-bar-btn" title="Adicionar prenda" aria-label="Adicionar prenda" onclick="document.getElementById('add-item-dialog').showModal()">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
-                    </button>
-                    {{ end }}
-                </div>
             </div>
             <hr/>
-            {{ if .Tshirts }}{{ template "tshirtList" .Tshirts }}<hr/>{{ end }}
-            {{ if .Books }}{{ template "booksList" .Books }}<hr/>{{ end }}
-            {{ if .Other }}{{ template "othersList" .Other }}<hr/>{{ end }}
+            {{ if .Items }}{{ template "itemlist" .Items }}{{ else }}<p class="empty-state">Sem prendas para mostrar.</p>{{ end }}
+            <hr/>
             <h4>That's All folks! &#128123</h4>
+        </div>
+
+        <div class="action-panel">
+            <button type="button" class="list-bar-btn btn-logout" title="Sair" aria-label="Sair" onclick="doLogout()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+            </button>
+            <details class="filter-menu">
+                <summary class="list-bar-btn" title="Filtrar" aria-label="Filtrar">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18l-7 8v6l-4 2v-8z"/></svg>
+                </summary>
+                <div class="filter-menu-items">
+                    <a href="/wishlist/{{ .CurrentSlug }}{{ if .Revealed }}?revelar=1{{ end }}" class="{{ if eq .Filter "" }}filter-active{{ end }}">Todos os tipos ({{ .AllCount }})</a>
+                    {{ range .TypeCounts }}
+                    <a href="/wishlist/{{ $.CurrentSlug }}?tipo={{ .Type }}{{ if $.Revealed }}&revelar=1{{ end }}" class="{{ if eq $.Filter .Type }}filter-active{{ end }}">{{ .Label }} ({{ .Count }})</a>
+                    {{ end }}
+                </div>
+            </details>
+            {{ if .IsAdmin }}
+            <button type="button" class="list-bar-btn" title="Nova lista" aria-label="Nova lista" onclick="document.getElementById('add-list-dialog').showModal()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M4 12h10M4 18h6M18 14v8M14 18h8"/></svg>
+            </button>
+            <button type="button" class="list-bar-btn" title="Adicionar prenda" aria-label="Adicionar prenda" onclick="document.getElementById('add-item-dialog').showModal()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+            </button>
+            {{ if gt .HiddenCount 0 }}
+            {{ if .Revealed }}
+            <a href="/wishlist/{{ .CurrentSlug }}{{ if .Filter }}?tipo={{ .Filter }}{{ end }}" class="list-bar-btn btn-reveal active" title="Ocultar prendas reveladas" aria-label="Ocultar prendas reveladas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </a>
+            {{ else }}
+            <a href="/wishlist/{{ .CurrentSlug }}?revelar=1{{ if .Filter }}&tipo={{ .Filter }}{{ end }}" class="list-bar-btn btn-reveal" title="Revelar prendas escondidas ({{ .HiddenCount }})" aria-label="Revelar prendas escondidas">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </a>
+            {{ end }}
+            {{ else }}
+            <button type="button" class="list-bar-btn btn-reveal" disabled title="Nada para revelar" aria-label="Nada para revelar">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            {{ end }}
+            {{ end }}
         </div>
 
         {{ if .IsAdmin }}
@@ -132,6 +150,17 @@
             }
             document.body.addEventListener('htmx:responseError', showRequestError);
             document.body.addEventListener('htmx:sendError', showRequestError);
+            function doLogout() {
+                // Overwrites the browser's cached Basic Auth credential for
+                // this realm with a bogus one; the next real request then
+                // gets a 401 and the browser prompts for fresh credentials.
+                // There's no real server-side "session" to end -- Basic
+                // Auth resends the credential on every request -- so this
+                // is the standard workaround, not a proper logout.
+                fetch(location.pathname, { headers: { Authorization: 'Basic ' + btoa('logout:logout') } })
+                    .catch(function () {})
+                    .finally(function () { location.reload(); });
+            }
             document.addEventListener('click', function (event) {
                 document.querySelectorAll('details.filter-menu[open]').forEach(function (menu) {
                     if (!menu.contains(event.target)) menu.open = false;

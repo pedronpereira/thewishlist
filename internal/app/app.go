@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strings"
 	"unicode"
 
@@ -134,107 +135,118 @@ func deriveItemName(title string) string {
 // .Title, etc.) working unchanged via field promotion.
 type itemView struct {
 	domain.WishItem
-	HiddenFromViewer bool
 	// ListSlug lets the template build the buy/edit/remove button URLs
 	// without needing access to the page's outer data from within the
 	// nested wishlistitem block.
 	ListSlug string
-	// IsAdmin controls whether the edit/remove controls render at all —
-	// distinct from HiddenFromViewer, which is about a purchased item's
-	// visibility, not admin capabilities.
+	// IsAdmin controls whether the edit/remove controls render at all.
 	IsAdmin bool
 }
 
-// newItemView hides a purchased item from the viewer only when they're
-// admin AND the list itself is marked as this admin's own recipient list —
-// admin browsing someone else's list still sees real purchase status, same
-// as any family viewer, so they don't accidentally double-buy for them.
 func newItemView(item domain.WishItem, isAdmin bool, list domain.List) itemView {
-	return itemView{
-		WishItem:         item,
-		HiddenFromViewer: isAdmin && item.WasPurchased && list.IsAdminRecipient,
-		ListSlug:         list.Slug,
-		IsAdmin:          isAdmin,
-	}
+	return itemView{WishItem: item, ListSlug: list.Slug, IsAdmin: isAdmin}
 }
 
-// Filter values accepted in the ?tipo= query parameter. Anything else is
-// treated as no filter.
-const (
-	filterTshirt = "t-shirt"
-	filterBook   = "book"
-	filterOther  = "outros"
-)
+// itemTypeFallback stands in for an item with no ItemType set. The forms
+// require one, so this should never happen in practice; it just keeps the
+// filter menu well-defined if it ever does.
+const itemTypeFallback = "sem-tipo"
 
-// normalizeFilter keeps only a recognised ?tipo= value; anything else means
-// no filter, so a stray or old link still shows the whole list.
-func normalizeFilter(tipo string) string {
-	switch tipo {
-	case filterTshirt, filterBook, filterOther:
-		return tipo
+// titleCaseItemType turns a free-text ItemType into a filter-menu label
+// ("t-shirt" -> "T-Shirt", "boardgame" -> "Boardgame"). ItemType has no
+// fixed set of values; the admin can type anything into the item form's
+// "Tipo" field, so this derives a label from whatever's actually there
+// instead of maintaining a translation table that would need updating
+// every time a new type shows up.
+func titleCaseItemType(s string) string {
+	var b strings.Builder
+	newWord := true
+	for _, r := range s {
+		if r == '-' || r == ' ' {
+			b.WriteRune(r)
+			newWord = true
+			continue
+		}
+		if newWord {
+			b.WriteRune(unicode.ToUpper(r))
+			newWord = false
+		} else {
+			b.WriteRune(r)
+		}
 	}
-	return ""
+	return b.String()
 }
 
-// bucketOf maps an item type onto the filter bucket it belongs to. Every
-// type that isn't t-shirt or book falls into "outros".
-func bucketOf(itemType string) string {
-	switch itemType {
-	case filterTshirt:
-		return filterTshirt
-	case filterBook:
-		return filterBook
-	default:
-		return filterOther
-	}
+// typeCount is one row of the filter menu: a real ItemType value present in
+// the list, its display label, and how many items have it.
+type typeCount struct {
+	Type  string
+	Label string
+	Count int
 }
 
-// wishlistView reproduces the Tshirts/Books/Other categorization the
-// template expects, derived at render time from the flat Items collection.
-// When Filter is set, only that bucket's items are filled in; the counts
-// always describe the whole list so the filter menu can show them.
+// buildTypeCounts turns a type-to-count tally into a slice sorted by label.
+// Sorted explicitly here, rather than relying on html/template's own
+// stable-but-easy-to-miss habit of sorting map keys when ranging over a
+// map, so the order is obvious from the Go code and testable without going
+// through the template at all.
+func buildTypeCounts(counts map[string]int) []typeCount {
+	result := make([]typeCount, 0, len(counts))
+	for t, n := range counts {
+		result = append(result, typeCount{Type: t, Label: titleCaseItemType(t), Count: n})
+	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Label < result[j].Label })
+	return result
+}
+
+// wishlistView is the flat item list for one page render, derived at
+// render time from the Wishlist's Items collection.
 type wishlistView struct {
-	Tshirts     []itemView
-	Books       []itemView
-	Other       []itemView
+	Items       []itemView
+	TypeCounts  []typeCount // for the filter menu, sorted by Label
 	CSRFToken   string
 	Lists       []domain.List // for the tab bar; Slug == CurrentSlug marks the active pill
 	CurrentSlug string
 	IsAdmin     bool // controls the admin-only list bar buttons
 	Filter      string
-	AllCount    int
-	TshirtCount int
-	BookCount   int
-	OtherCount  int
+	Revealed    bool
+	AllCount    int // items actually in scope for this render, before the type filter
+	HiddenCount int // items hidden from the admin on their own list, regardless of Revealed
 }
 
-func newWishlistView(w domain.Wishlist, isAdmin bool, list domain.List, filter string) wishlistView {
-	view := wishlistView{IsAdmin: isAdmin, Filter: filter}
+// newWishlistView builds the page's item list. A purchased item is left out
+// entirely, not just visually hidden, when the viewer is the admin on their
+// own IsAdminRecipient list, unless reveal is set: admin browsing any other
+// list sees real purchase status like any family viewer, so they don't
+// accidentally double-buy for someone else. When filter is set, only items
+// of that exact ItemType are included; AllCount and TypeCounts still
+// describe everything in scope (post-reveal, pre-filter) so the menus can
+// show accurate totals regardless of the current filter.
+func newWishlistView(w domain.Wishlist, isAdmin bool, list domain.List, filter string, reveal bool) wishlistView {
+	view := wishlistView{IsAdmin: isAdmin, Filter: filter, Revealed: reveal}
+	counts := map[string]int{}
 	for _, item := range w.Items {
-		bucket := bucketOf(item.ItemType)
-		view.AllCount++
-		switch bucket {
-		case filterTshirt:
-			view.TshirtCount++
-		case filterBook:
-			view.BookCount++
-		default:
-			view.OtherCount++
+		hiddenFromViewer := isAdmin && item.WasPurchased && list.IsAdminRecipient
+		if hiddenFromViewer {
+			view.HiddenCount++
+			if !reveal {
+				continue
+			}
 		}
 
-		if filter != "" && filter != bucket {
+		view.AllCount++
+		itemType := item.ItemType
+		if itemType == "" {
+			itemType = itemTypeFallback
+		}
+		counts[itemType]++
+
+		if filter != "" && filter != itemType {
 			continue
 		}
-		iv := newItemView(item, isAdmin, list)
-		switch bucket {
-		case filterTshirt:
-			view.Tshirts = append(view.Tshirts, iv)
-		case filterBook:
-			view.Books = append(view.Books, iv)
-		default:
-			view.Other = append(view.Other, iv)
-		}
+		view.Items = append(view.Items, newItemView(item, isAdmin, list))
 	}
+	view.TypeCounts = buildTypeCounts(counts)
 	return view
 }
 
@@ -282,7 +294,8 @@ func (a *app) getListPageHandler(c echo.Context) error {
 	currentList := findList(lists, slug)
 
 	isAdmin, _ := c.Get("isAdmin").(bool)
-	view := newWishlistView(wishlist, isAdmin, currentList, normalizeFilter(c.QueryParam("tipo")))
+	reveal := isAdmin && c.QueryParam("revelar") != ""
+	view := newWishlistView(wishlist, isAdmin, currentList, c.QueryParam("tipo"), reveal)
 	view.Lists = lists
 	view.CurrentSlug = slug
 	if token, ok := c.Get(middleware.DefaultCSRFConfig.ContextKey).(string); ok {
@@ -522,12 +535,19 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 	}
 
 	isAdmin, _ := c.Get("isAdmin").(bool)
+	if isAdmin && wishitem.WasPurchased && currentList.IsAdminRecipient {
+		// The buyer just unknowingly bought and hid their own gift. Mirrors
+		// deleteWishItemHandler: 200 with an empty body, not 204, so HTMX
+		// actually performs the morph swap and the card disappears; a 204
+		// makes HTMX skip the swap entirely.
+		return c.NoContent(http.StatusOK)
+	}
 	return c.Render(http.StatusOK, "wishlistitem", newItemView(*wishitem, isAdmin, currentList))
 }
 
 // itemFormView is the render data for the admin-only edit-item form
 // fragment — always admin-only by virtue of the route requiring it, so no
-// HiddenFromViewer/IsAdmin fields are needed here unlike itemView.
+// IsAdmin field is needed here unlike itemView.
 type itemFormView struct {
 	domain.WishItem
 	ListSlug string

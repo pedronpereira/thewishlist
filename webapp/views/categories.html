@@ -1,7 +1,3 @@
-{{ block "tshirtList" . }} {{ template "itemlist" . }} {{ end }}
-{{ block "booksList" . }} {{ template "itemlist" . }} {{ end }}
-{{ block "othersList" . }} {{ template "itemlist" . }} {{ end }}
-
 {{ block "itemlist" . }}
 <div class="wishlist-grid">
     {{ range $element := . }}

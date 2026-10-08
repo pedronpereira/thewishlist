@@ -324,34 +324,41 @@ func TestReplaceCompleteWishListHandler_RejectsDuplicateSlugs(t *testing.T) {
 	}
 }
 
-// TestNewItemView_HiddenFromViewer directly tests the core new behavior
-// this phase introduces: purchases are hidden from admin only on a list
-// marked IsAdminRecipient, never on other lists, and never from non-admin
-// viewers regardless of the list.
-func TestNewItemView_HiddenFromViewer(t *testing.T) {
-	purchased := domain.WishItem{Id: "x", WasPurchased: true}
-	unpurchased := domain.WishItem{Id: "y", WasPurchased: false}
+// TestNewWishlistView_HidesPurchasedFromAdminUnlessRevealed covers the core
+// behavior this phase introduces: a purchased item is left out of the view
+// entirely, not just visually hidden, only when the viewer is admin AND the
+// list is marked as their own recipient list, unless reveal is set.
+func TestNewWishlistView_HidesPurchasedFromAdminUnlessRevealed(t *testing.T) {
+	purchased := domain.WishItem{Id: "x", ItemType: "book", WasPurchased: true}
+	unpurchased := domain.WishItem{Id: "y", ItemType: "book", WasPurchased: false}
 	ownList := domain.List{Slug: "pedro", IsAdminRecipient: true}
 	otherList := domain.List{Slug: "wife", IsAdminRecipient: false}
 
 	tests := []struct {
-		name    string
-		item    domain.WishItem
-		isAdmin bool
-		list    domain.List
-		want    bool
+		name            string
+		item            domain.WishItem
+		isAdmin         bool
+		list            domain.List
+		reveal          bool
+		wantIncluded    bool
+		wantHiddenCount int
 	}{
-		{"admin, purchased, own list -> hidden", purchased, true, ownList, true},
-		{"admin, purchased, other list -> visible", purchased, true, otherList, false},
-		{"family, purchased, own list -> visible", purchased, false, ownList, false},
-		{"admin, unpurchased, own list -> visible", unpurchased, true, ownList, false},
+		{"admin, purchased, own list, not revealed -> hidden", purchased, true, ownList, false, false, 1},
+		{"admin, purchased, own list, revealed -> shown", purchased, true, ownList, true, true, 1},
+		{"admin, purchased, other list -> visible", purchased, true, otherList, false, true, 0},
+		{"family, purchased, own list -> visible", purchased, false, ownList, false, true, 0},
+		{"admin, unpurchased, own list -> visible", unpurchased, true, ownList, false, true, 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newItemView(tt.item, tt.isAdmin, tt.list)
-			if got.HiddenFromViewer != tt.want {
-				t.Fatalf("HiddenFromViewer = %v, want %v", got.HiddenFromViewer, tt.want)
+			w := domain.Wishlist{Items: []domain.WishItem{tt.item}}
+			view := newWishlistView(w, tt.isAdmin, tt.list, "", tt.reveal)
+			if gotIncluded := len(view.Items) == 1; gotIncluded != tt.wantIncluded {
+				t.Fatalf("included = %v, want %v", gotIncluded, tt.wantIncluded)
+			}
+			if view.HiddenCount != tt.wantHiddenCount {
+				t.Fatalf("HiddenCount = %d, want %d", view.HiddenCount, tt.wantHiddenCount)
 			}
 		})
 	}
@@ -375,25 +382,33 @@ func TestBasicAuth_FamilyAndAdmin(t *testing.T) {
 		t.Fatalf("admin credentials: expected 200, got %d", rec.Code)
 	}
 
-	// Confirms isAdmin was actually set on the request context and reached
-	// the view: p2 is purchased on pedro's (IsAdminRecipient) list, so it
-	// should be flagged hidden. Whether a hidden item's markup is actually
-	// omitted from the page is the real template's job (webapp/views/item.html,
-	// verified separately by hand) — this stub renderer just serializes the
-	// Go view struct, so the item itself still appears here, correctly
-	// flagged. TestNewItemView_HiddenFromViewer covers the flag logic
-	// directly and more precisely; this test's job is just the auth wiring.
+	// p2 is purchased on pedro's (IsAdminRecipient) list, so it should be
+	// excluded from the admin's response entirely -- confirms isAdmin
+	// actually reached the view-building code, not just a per-item flag.
 	var view struct {
-		Books []struct {
-			Id               string
-			HiddenFromViewer bool
-		}
+		Items []struct{ Id string }
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
 		t.Fatalf("unmarshaling rendered view: %v", err)
 	}
-	if len(view.Books) != 1 || view.Books[0].Id != "p2" || !view.Books[0].HiddenFromViewer {
-		t.Fatalf("expected p2 flagged HiddenFromViewer for the admin, got %+v", view.Books)
+	for _, item := range view.Items {
+		if item.Id == "p2" {
+			t.Fatalf("expected p2 excluded from the admin's response, got %+v", view.Items)
+		}
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/pedro?revelar=1", testAdminUser, testAdminPass, "")
+	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+		t.Fatalf("unmarshaling revealed view: %v", err)
+	}
+	found := false
+	for _, item := range view.Items {
+		if item.Id == "p2" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected p2 present after revealing, got %+v", view.Items)
 	}
 }
 
@@ -712,31 +727,29 @@ func TestDeriveListSlug(t *testing.T) {
 // listPageView mirrors wishlistView's fields as the test renderer serializes
 // them (Go field names, no JSON tags).
 type listPageView struct {
-	Tshirts     []struct{ Id string }
-	Books       []struct{ Id string }
-	Other       []struct{ Id string }
+	Items       []struct{ Id string }
 	Filter      string
 	AllCount    int
-	TshirtCount int
-	BookCount   int
-	OtherCount  int
+	HiddenCount int
+	TypeCounts  []struct {
+		Type  string
+		Label string
+		Count int
+	}
 }
 
 func TestListPageFilter(t *testing.T) {
 	e := newTestServer(t, testLists())
 
 	tests := []struct {
-		name       string
-		query      string
-		wantTshirt int
-		wantBook   int
-		wantOther  int
+		name      string
+		query     string
+		wantItems int
 	}{
-		{"no filter shows everything", "", 1, 1, 0},
-		{"book filter", "?tipo=book", 0, 1, 0},
-		{"t-shirt filter", "?tipo=t-shirt", 1, 0, 0},
-		{"outros filter", "?tipo=outros", 0, 0, 0},
-		{"unknown filter is ignored", "?tipo=bogus", 1, 1, 0},
+		{"no filter shows everything", "", 2},
+		{"book filter", "?tipo=book", 1},
+		{"t-shirt filter", "?tipo=t-shirt", 1},
+		{"unknown type shows nothing", "?tipo=boardgame", 0},
 	}
 
 	for _, tt := range tests {
@@ -749,14 +762,76 @@ func TestListPageFilter(t *testing.T) {
 			if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
 				t.Fatalf("unmarshaling view: %v", err)
 			}
-			if len(view.Tshirts) != tt.wantTshirt || len(view.Books) != tt.wantBook || len(view.Other) != tt.wantOther {
-				t.Fatalf("shown t-shirts/books/other = %d/%d/%d, want %d/%d/%d",
-					len(view.Tshirts), len(view.Books), len(view.Other), tt.wantTshirt, tt.wantBook, tt.wantOther)
+			if len(view.Items) != tt.wantItems {
+				t.Fatalf("got %d items, want %d", len(view.Items), tt.wantItems)
 			}
-			if view.AllCount != 2 || view.TshirtCount != 1 || view.BookCount != 1 || view.OtherCount != 0 {
-				t.Fatalf("counts should describe the whole list, got all=%d tshirt=%d book=%d other=%d",
-					view.AllCount, view.TshirtCount, view.BookCount, view.OtherCount)
+			if view.AllCount != 2 {
+				t.Fatalf("AllCount = %d, want 2 (unaffected by the type filter)", view.AllCount)
 			}
 		})
+	}
+}
+
+func TestListPageFilter_TypeCountsAreTitleCasedAndSorted(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doRequest(e, http.MethodGet, "/wishlist/pedro", testFamilyUser, testFamilyPass, "")
+	var view listPageView
+	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+		t.Fatalf("unmarshaling view: %v", err)
+	}
+
+	want := []struct {
+		Type  string
+		Label string
+		Count int
+	}{
+		{"book", "Book", 1},
+		{"t-shirt", "T-Shirt", 1},
+	}
+	if len(view.TypeCounts) != len(want) {
+		t.Fatalf("got %d type counts, want %d: %+v", len(view.TypeCounts), len(want), view.TypeCounts)
+	}
+	for i, w := range want {
+		if view.TypeCounts[i] != w {
+			t.Fatalf("TypeCounts[%d] = %+v, want %+v", i, view.TypeCounts[i], w)
+		}
+	}
+}
+
+func TestPurchaseItemHandler_HidesFromAdminOnOwnList(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doProtectedRequest(t, e, "pedro", http.MethodPost, "/wishlist/pedro/wishitem/p1/buy", testAdminUser, testAdminPass, "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("buy: expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("expected an empty body so HTMX removes the card, got %q", rec.Body.String())
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/pedro", testAdminUser, testAdminPass, "")
+	var view listPageView
+	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+		t.Fatalf("unmarshaling view: %v", err)
+	}
+	for _, item := range view.Items {
+		if item.Id == "p1" {
+			t.Fatalf("expected p1 excluded after the admin bought it on their own list, got %+v", view.Items)
+		}
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/pedro?revelar=1", testAdminUser, testAdminPass, "")
+	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+		t.Fatalf("unmarshaling revealed view: %v", err)
+	}
+	found := false
+	for _, item := range view.Items {
+		if item.Id == "p1" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("expected p1 present after revealing, got %+v", view.Items)
 	}
 }

@@ -1,5 +1,4 @@
 {{ block "wishlistitem" . }}
-{{ if not .HiddenFromViewer }}
     <div class="wish-item-{{ .WasPurchased }}" id="wishitem-{{ .Id }}" hx-ext="morph">
         <img src="{{ if .ImgSource }}{{ .ImgSource }}{{ else }}/img/broHelper.png{{ end }}" alt="{{ .Title }}"/>
         <div class="wish-item-content">
@@ -48,7 +47,6 @@
             {{ end }}
         </div>
     </div>
-{{ end }}
 {{ end }}
 
 {{ block "wishitemeditform" . }}
