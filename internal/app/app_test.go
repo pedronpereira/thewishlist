@@ -835,3 +835,32 @@ func TestPurchaseItemHandler_HidesFromAdminOnOwnList(t *testing.T) {
 		t.Fatalf("expected p1 present after revealing, got %+v", view.Items)
 	}
 }
+
+// TestFetchItemImageHandler_GuardsBeforeEverFetching covers everything the
+// handler can reject without making a network call: missing credentials,
+// non-admin credentials, a missing ?url=, and a URL blocked by the
+// loopback/private-IP guard (parseFetchableURL) — all paths that must
+// short-circuit before fetchOpenGraphImage ever dials out.
+func TestFetchItemImageHandler_GuardsBeforeEverFetching(t *testing.T) {
+	e := newTestServer(t, testLists())
+
+	rec := doRequest(e, http.MethodGet, "/wishlist/fetch-image?url=http://example.com", "", "", "")
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("no credentials: expected 401, got %d", rec.Code)
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/fetch-image?url=http://example.com", testFamilyUser, testFamilyPass, "")
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("family credentials: expected 403, got %d", rec.Code)
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/fetch-image", testAdminUser, testAdminPass, "")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("missing url: expected 400, got %d", rec.Code)
+	}
+
+	rec = doRequest(e, http.MethodGet, "/wishlist/fetch-image?url=http://127.0.0.1:1/x", testAdminUser, testAdminPass, "")
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("loopback url: expected 502, got %d: %s", rec.Code, rec.Body.String())
+	}
+}

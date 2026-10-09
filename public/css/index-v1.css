@@ -416,6 +416,41 @@ dialog.item-dialog::backdrop {
     flex: none;
 }
 
+.input-with-button {
+    flex-direction: row;
+    align-items: stretch;
+    gap: 0.8rem;
+    width: 100%;
+    max-width: none;
+}
+
+.input-with-button input {
+    flex: 1;
+    min-width: 0;
+}
+
+.btn-fetch-image {
+    flex: none;
+    align-self: stretch;
+    padding: 0 1.4rem;
+    font-size: 1.4rem;
+    font-weight: 700;
+    white-space: nowrap;
+    background-color: var(--button-bg-color);
+    border: 0.1rem solid var(--divider-color);
+    border-radius: 0.8rem;
+}
+
+.btn-fetch-image:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.fetch-image-status {
+    font-size: 1.4rem;
+    margin-top: -0.8rem;
+}
+
 .item-dialog img.img-preview {
     width: 14rem;
     height: 14rem;

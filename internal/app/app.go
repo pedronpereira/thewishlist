@@ -68,6 +68,8 @@ func (a *app) RegisterHandlers(e *echo.Echo) {
 	e.DELETE("/wishlist/:slug/wishitem/:id", a.deleteWishItemHandler)
 	//admin-only: create an empty list
 	e.POST("/wishlist/lists", a.createListHandler)
+	//admin-only: look up an og:image for the add-item form's shop link
+	e.GET("/wishlist/fetch-image", a.fetchItemImageHandler)
 }
 
 // handleStoreError translates a missing-list error into a 404 instead of a
@@ -351,6 +353,29 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, requestItem)
+}
+
+// fetchItemImageHandler backs the add-item form's "Buscar imagem" button:
+// given a shop URL, it fetches that page server-side and returns the
+// og:image (or twitter:image) it finds, so the admin doesn't have to open
+// the link and copy an image URL by hand. It doesn't touch storage, so it's
+// a plain GET with no CSRF token required (see useCSRFProtection).
+func (a *app) fetchItemImageHandler(c echo.Context) error {
+	if err := requireAdmin(c); err != nil {
+		return err
+	}
+
+	rawURL := c.QueryParam("url")
+	if rawURL == "" {
+		return echo.NewHTTPError(http.StatusBadRequest, "indica um link da loja")
+	}
+
+	imageURL, err := fetchOpenGraphImage(rawURL)
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadGateway, err.Error())
+	}
+
+	return c.JSON(http.StatusOK, map[string]string{"imageUrl": imageURL})
 }
 
 func (a *app) updateWishItemHandler(c echo.Context) error {
