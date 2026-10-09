@@ -215,6 +215,182 @@ func TestFileStore_CreateList(t *testing.T) {
 	}
 }
 
+func TestFileStore_AddItem(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "existing"}}},
+	})
+
+	if err := fs.AddItem("pedro", domain.WishItem{Id: "2", Name: "new", ItemType: "book"}); err != nil {
+		t.Fatalf("AddItem() error: %v", err)
+	}
+
+	got, err := fs.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("expected 2 items after add, got %d: %+v", len(got.Items), got.Items)
+	}
+}
+
+func TestFileStore_AddItem_UpsertsExistingId(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "old", ItemType: "book"}}},
+	})
+
+	if err := fs.AddItem("pedro", domain.WishItem{Id: "1", Name: "renamed", ItemType: "book"}); err != nil {
+		t.Fatalf("AddItem() error: %v", err)
+	}
+
+	got, err := fs.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Name != "renamed" {
+		t.Fatalf("expected the existing item replaced in place, got %+v", got.Items)
+	}
+}
+
+func TestFileStore_AddItem_NotFound(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}},
+	})
+
+	err := fs.AddItem("missing", domain.WishItem{Id: "1", ItemType: "book"})
+	if !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestFileStore_GetItem(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "item1"}}},
+	})
+
+	got, err := fs.GetItem("pedro", "1")
+	if err != nil {
+		t.Fatalf("GetItem() error: %v", err)
+	}
+	if got.Name != "item1" {
+		t.Fatalf("expected item1, got %+v", got)
+	}
+
+	if _, err := fs.GetItem("pedro", "missing"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound for a missing item id, got %v", err)
+	}
+	if _, err := fs.GetItem("missing", "1"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound for a missing list, got %v", err)
+	}
+}
+
+func TestFileStore_UpdateItem(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{
+			List: domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{
+				{Id: "1", Name: "old", ItemType: "book"},
+				{Id: "2", Name: "untouched", ItemType: "t-shirt"},
+			},
+		},
+	})
+
+	if err := fs.UpdateItem("pedro", domain.WishItem{Id: "1", Name: "new", ItemType: "book"}); err != nil {
+		t.Fatalf("UpdateItem() error: %v", err)
+	}
+
+	got, err := fs.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("expected UpdateItem to leave the other item alone, got %+v", got.Items)
+	}
+	for _, item := range got.Items {
+		if item.Id == "1" && item.Name != "new" {
+			t.Fatalf("expected item 1 updated, got %+v", item)
+		}
+		if item.Id == "2" && item.Name != "untouched" {
+			t.Fatalf("expected item 2 untouched, got %+v", item)
+		}
+	}
+}
+
+func TestFileStore_UpdateItem_NotFound(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1"}}},
+	})
+
+	err := fs.UpdateItem("pedro", domain.WishItem{Id: "missing", ItemType: "book"})
+	if !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound, got %v", err)
+	}
+
+	err = fs.UpdateItem("missing", domain.WishItem{Id: "1", ItemType: "book"})
+	if !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestFileStore_DeleteItem(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{
+			List:  domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{{Id: "1"}, {Id: "2"}},
+		},
+	})
+
+	if err := fs.DeleteItem("pedro", "1"); err != nil {
+		t.Fatalf("DeleteItem() error: %v", err)
+	}
+
+	got, err := fs.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Id != "2" {
+		t.Fatalf("expected only item 2 left, got %+v", got.Items)
+	}
+
+	if err := fs.DeleteItem("pedro", "1"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound deleting an already-removed item, got %v", err)
+	}
+	if err := fs.DeleteItem("missing", "2"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestFileStore_PurchaseItem(t *testing.T) {
+	fs := newTestFileStore(t, []domain.ListWithItems{
+		{
+			List:  domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{{Id: "1", WasPurchased: false}},
+		},
+	})
+
+	got, err := fs.PurchaseItem("pedro", "1")
+	if err != nil {
+		t.Fatalf("PurchaseItem() error: %v", err)
+	}
+	if !got.WasPurchased {
+		t.Fatalf("expected the returned item marked purchased, got %+v", got)
+	}
+
+	persisted, err := fs.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if !persisted.Items[0].WasPurchased {
+		t.Fatalf("expected the purchase to persist, got %+v", persisted.Items[0])
+	}
+
+	if _, err := fs.PurchaseItem("pedro", "missing"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound, got %v", err)
+	}
+	if _, err := fs.PurchaseItem("missing", "1"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
 func TestFileStore_WriteLeavesOnlyTheWishlistFile(t *testing.T) {
 	dir := t.TempDir()
 	fs := &FileStore{path: filepath.Join(dir, "wishlist.json")}

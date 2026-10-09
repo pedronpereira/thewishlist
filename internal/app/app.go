@@ -337,18 +337,7 @@ func (a *app) createWishItemHandler(c echo.Context) error {
 		requestItem.Name = deriveItemName(requestItem.Title)
 	}
 
-	wishlist, err := a.store.LoadList(slug)
-	if err != nil {
-		return handleStoreError(err)
-	}
-
-	if wishlist.IndexOf(requestItem) == -1 {
-		wishlist.AddItem(requestItem)
-	} else if _, err := wishlist.UpdateItem(requestItem); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	if err := a.store.SaveList(slug, wishlist); err != nil {
+	if err := a.store.AddItem(slug, requestItem); err != nil {
 		return handleStoreError(err)
 	}
 
@@ -390,24 +379,25 @@ func (a *app) updateWishItemHandler(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
 	}
 
-	wishlist, err := a.store.LoadList(slug)
-	if err != nil {
-		return handleStoreError(err)
+	if requestItem.Id == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "item has no id")
+	}
+	if requestItem.ItemType == "" {
+		return echo.NewHTTPError(http.StatusInternalServerError, "item has no type")
 	}
 
-	// UpdateItem replaces the whole item, so a request that omits name
-	// would otherwise blank it. Keep the stored name in that case.
+	// A single targeted UPDATE replaces the whole row, so a request that
+	// omits name would otherwise blank it. Keep the stored name in that
+	// case — the extra lookup only happens when it's actually needed.
 	if requestItem.Name == "" {
-		if index := wishlist.IndexOf(requestItem); index != -1 {
-			requestItem.Name = wishlist.Items[index].Name
+		existing, err := a.store.GetItem(slug, requestItem.Id)
+		if err != nil {
+			return handleStoreError(err)
 		}
+		requestItem.Name = existing.Name
 	}
 
-	if _, err := wishlist.UpdateItem(requestItem); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, err.Error())
-	}
-
-	if err := a.store.SaveList(slug, wishlist); err != nil {
+	if err := a.store.UpdateItem(slug, requestItem); err != nil {
 		return handleStoreError(err)
 	}
 
@@ -539,18 +529,12 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 	slug := c.Param("slug")
 	id := c.Param("id")
 
-	wishlist, err := a.store.LoadList(slug)
-	if err != nil {
-		return handleStoreError(err)
-	}
-
 	//TODO: make the call open a pop-up
-	wishitem := wishlist.ItemPurchased(id)
-	if wishitem == nil {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
-	}
-
-	if err := a.store.SaveList(slug, wishlist); err != nil {
+	wishitem, err := a.store.PurchaseItem(slug, id)
+	if err != nil {
+		if errors.Is(err, storage.ErrItemNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
+		}
 		return handleStoreError(err)
 	}
 
@@ -567,7 +551,7 @@ func (a *app) purchaseItemHandler(c echo.Context) error {
 		// makes HTMX skip the swap entirely.
 		return c.NoContent(http.StatusOK)
 	}
-	return c.Render(http.StatusOK, "wishlistitem", newItemView(*wishitem, isAdmin, currentList))
+	return c.Render(http.StatusOK, "wishlistitem", newItemView(wishitem, isAdmin, currentList))
 }
 
 // itemFormView is the render data for the admin-only edit-item form
@@ -586,18 +570,16 @@ func (a *app) editWishItemFormHandler(c echo.Context) error {
 	slug := c.Param("slug")
 	id := c.Param("id")
 
-	wishlist, err := a.store.LoadList(slug)
+	item, err := a.store.GetItem(slug, id)
 	if err != nil {
+		if errors.Is(err, storage.ErrItemNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
+		}
 		return handleStoreError(err)
 	}
 
-	index := wishlist.IndexOf(domain.WishItem{Id: id})
-	if index == -1 {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
-	}
-
 	return c.Render(http.StatusOK, "wishitemeditform", itemFormView{
-		WishItem: wishlist.Items[index],
+		WishItem: item,
 		ListSlug: slug,
 	})
 }
@@ -610,16 +592,10 @@ func (a *app) deleteWishItemHandler(c echo.Context) error {
 	slug := c.Param("slug")
 	id := c.Param("id")
 
-	wishlist, err := a.store.LoadList(slug)
-	if err != nil {
-		return handleStoreError(err)
-	}
-
-	if !wishlist.RemoveItem(id) {
-		return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
-	}
-
-	if err := a.store.SaveList(slug, wishlist); err != nil {
+	if err := a.store.DeleteItem(slug, id); err != nil {
+		if errors.Is(err, storage.ErrItemNotFound) {
+			return echo.NewHTTPError(http.StatusNotFound, fmt.Sprintf("item %s not found", id))
+		}
 		return handleStoreError(err)
 	}
 

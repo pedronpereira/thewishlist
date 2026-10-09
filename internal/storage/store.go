@@ -20,8 +20,35 @@ type Store interface {
 	// doesn't name an existing list.
 	LoadList(slug string) (domain.Wishlist, error)
 	// SaveList also returns ErrListNotFound for an unknown slug — it mutates
-	// an existing list's items, it does not create new lists.
+	// an existing list's items, it does not create new lists. It replaces
+	// every item in the list in one shot; the single-item methods below are
+	// cheaper for mutating just one item, which is what every handler now
+	// does, so nothing currently calls SaveList — kept as a general
+	// bulk-replace primitive.
 	SaveList(slug string, w domain.Wishlist) error
+
+	// AddItem inserts a new item into the named list, or replaces an
+	// existing item with the same id in place (upsert) — matching the
+	// create handler's "create or overwrite" semantics in one targeted
+	// write, instead of loading, deleting, and reinserting every item in
+	// the list via SaveList. Returns ErrListNotFound for an unknown slug.
+	AddItem(slug string, item domain.WishItem) error
+	// GetItem returns one item from the named list. Returns ErrListNotFound
+	// for an unknown slug, ErrItemNotFound if the list exists but has no
+	// item with that id.
+	GetItem(slug, id string) (domain.WishItem, error)
+	// UpdateItem replaces an existing item's fields in place. Returns
+	// ErrListNotFound for an unknown slug, ErrItemNotFound if the list
+	// exists but has no item with that id.
+	UpdateItem(slug string, item domain.WishItem) error
+	// DeleteItem removes one item from the named list. Returns
+	// ErrListNotFound for an unknown slug, ErrItemNotFound if the list
+	// exists but has no item with that id.
+	DeleteItem(slug, id string) error
+	// PurchaseItem marks one item as purchased and returns its resulting
+	// state. Returns ErrListNotFound for an unknown slug, ErrItemNotFound
+	// if the list exists but has no item with that id.
+	PurchaseItem(slug, id string) (domain.WishItem, error)
 
 	// LoadAll and ReplaceAll operate across every list at once, for the
 	// bulk GET/POST /wishlist export/import endpoints.
@@ -37,6 +64,7 @@ type Store interface {
 var (
 	ErrListNotFound = errors.New("list not found")
 	ErrListExists   = errors.New("list already exists")
+	ErrItemNotFound = errors.New("item not found")
 )
 
 func NewFileStore(path string) *FileStore {

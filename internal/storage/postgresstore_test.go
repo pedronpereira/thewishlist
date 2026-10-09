@@ -234,6 +234,214 @@ func TestPostgresStore_LoadAllAndReplaceAll(t *testing.T) {
 	}
 }
 
+func TestPostgresStore_AddItem(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "existing"}}},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	if err := store.AddItem("pedro", domain.WishItem{Id: "2", Name: "new", ItemType: "book"}); err != nil {
+		t.Fatalf("AddItem() error: %v", err)
+	}
+
+	got, err := store.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("expected 2 items after add, got %d: %+v", len(got.Items), got.Items)
+	}
+}
+
+func TestPostgresStore_AddItem_UpsertsExistingId(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "old", ItemType: "book"}}},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	if err := store.AddItem("pedro", domain.WishItem{Id: "1", Name: "renamed", ItemType: "book"}); err != nil {
+		t.Fatalf("AddItem() error: %v", err)
+	}
+
+	got, err := store.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Name != "renamed" {
+		t.Fatalf("expected the existing item replaced in place, got %+v", got.Items)
+	}
+}
+
+func TestPostgresStore_AddItem_NotFound(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	err := store.AddItem("missing", domain.WishItem{Id: "1", ItemType: "book"})
+	if !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestPostgresStore_GetItem(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1", Name: "item1"}}},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	got, err := store.GetItem("pedro", "1")
+	if err != nil {
+		t.Fatalf("GetItem() error: %v", err)
+	}
+	if got.Name != "item1" {
+		t.Fatalf("expected item1, got %+v", got)
+	}
+
+	if _, err := store.GetItem("pedro", "missing"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound for a missing item id, got %v", err)
+	}
+	if _, err := store.GetItem("missing", "1"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound for a missing list, got %v", err)
+	}
+}
+
+func TestPostgresStore_UpdateItem(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{
+			List: domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{
+				{Id: "1", Name: "old", ItemType: "book"},
+				{Id: "2", Name: "untouched", ItemType: "t-shirt"},
+			},
+		},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	if err := store.UpdateItem("pedro", domain.WishItem{Id: "1", Name: "new", ItemType: "book"}); err != nil {
+		t.Fatalf("UpdateItem() error: %v", err)
+	}
+
+	got, err := store.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 2 {
+		t.Fatalf("expected UpdateItem to leave the other item alone, got %+v", got.Items)
+	}
+	for _, item := range got.Items {
+		if item.Id == "1" && item.Name != "new" {
+			t.Fatalf("expected item 1 updated, got %+v", item)
+		}
+		if item.Id == "2" && item.Name != "untouched" {
+			t.Fatalf("expected item 2 untouched, got %+v", item)
+		}
+	}
+}
+
+func TestPostgresStore_UpdateItem_NotFound(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{List: domain.List{Slug: "pedro", Name: "Pedro"}, Items: []domain.WishItem{{Id: "1"}}},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	err := store.UpdateItem("pedro", domain.WishItem{Id: "missing", ItemType: "book"})
+	if !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound, got %v", err)
+	}
+
+	err = store.UpdateItem("missing", domain.WishItem{Id: "1", ItemType: "book"})
+	if !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestPostgresStore_DeleteItem(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{
+			List:  domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{{Id: "1"}, {Id: "2"}},
+		},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	if err := store.DeleteItem("pedro", "1"); err != nil {
+		t.Fatalf("DeleteItem() error: %v", err)
+	}
+
+	got, err := store.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if len(got.Items) != 1 || got.Items[0].Id != "2" {
+		t.Fatalf("expected only item 2 left, got %+v", got.Items)
+	}
+
+	if err := store.DeleteItem("pedro", "1"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound deleting an already-removed item, got %v", err)
+	}
+	if err := store.DeleteItem("missing", "2"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
+func TestPostgresStore_PurchaseItem(t *testing.T) {
+	store := newTestPostgresStore(t)
+
+	if err := store.ReplaceAll([]domain.ListWithItems{
+		{
+			List:  domain.List{Slug: "pedro", Name: "Pedro"},
+			Items: []domain.WishItem{{Id: "1", WasPurchased: false}},
+		},
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	got, err := store.PurchaseItem("pedro", "1")
+	if err != nil {
+		t.Fatalf("PurchaseItem() error: %v", err)
+	}
+	if !got.WasPurchased {
+		t.Fatalf("expected the returned item marked purchased, got %+v", got)
+	}
+
+	persisted, err := store.LoadList("pedro")
+	if err != nil {
+		t.Fatalf("LoadList() error: %v", err)
+	}
+	if !persisted.Items[0].WasPurchased {
+		t.Fatalf("expected the purchase to persist, got %+v", persisted.Items[0])
+	}
+
+	if _, err := store.PurchaseItem("pedro", "missing"); !errors.Is(err, ErrItemNotFound) {
+		t.Fatalf("expected ErrItemNotFound, got %v", err)
+	}
+	if _, err := store.PurchaseItem("missing", "1"); !errors.Is(err, ErrListNotFound) {
+		t.Fatalf("expected ErrListNotFound, got %v", err)
+	}
+}
+
 func TestPostgresStore_CreateList(t *testing.T) {
 	store := newTestPostgresStore(t)
 

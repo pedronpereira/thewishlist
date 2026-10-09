@@ -218,6 +218,130 @@ func (s *PostgresStore) SaveList(slug string, w domain.Wishlist) error {
 	return nil
 }
 
+// AddItem inserts a new item into slug's list, or replaces an existing item
+// with the same id in place (upsert) via ON CONFLICT, matching the create
+// handler's semantics in a single round trip instead of SaveList's
+// delete-and-reinsert-everything. The list_slug foreign key constraint
+// catches an unknown slug, so there's no separate existence check.
+func (s *PostgresStore) AddItem(slug string, item domain.WishItem) error {
+	ctx := context.Background()
+	_, err := s.pool.Exec(ctx,
+		`INSERT INTO wish_items (id, name, title, description, item_type, shop_url, was_purchased, img_source, list_slug)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		 ON CONFLICT (id) DO UPDATE SET
+		   name = EXCLUDED.name,
+		   title = EXCLUDED.title,
+		   description = EXCLUDED.description,
+		   item_type = EXCLUDED.item_type,
+		   shop_url = EXCLUDED.shop_url,
+		   was_purchased = EXCLUDED.was_purchased,
+		   img_source = EXCLUDED.img_source,
+		   list_slug = EXCLUDED.list_slug`,
+		item.Id, item.Name, item.Title, item.Description,
+		item.ItemType, item.ShopUrl, item.WasPurchased, item.ImgSource, slug,
+	)
+
+	// 23503 is Postgres's foreign_key_violation: list_slug references
+	// lists(slug).
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+		return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+	}
+	if err != nil {
+		return fmt.Errorf("inserting wish item %q into list %q: %w", item.Id, slug, err)
+	}
+	return nil
+}
+
+// itemNotFound disambiguates a 0-row write/lookup against wish_items: it's
+// either an unknown list (ErrListNotFound) or a known list with no matching
+// item id (ErrItemNotFound) — worth the extra round trip since it only runs
+// on the not-found path, not on every call.
+func (s *PostgresStore) itemNotFound(ctx context.Context, slug, id string) error {
+	exists, err := s.listExists(ctx, slug)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+	}
+	return fmt.Errorf("item %q: %w", id, ErrItemNotFound)
+}
+
+func (s *PostgresStore) GetItem(slug, id string) (domain.WishItem, error) {
+	ctx := context.Background()
+
+	var item domain.WishItem
+	err := s.pool.QueryRow(ctx,
+		`SELECT id, name, title, description, item_type, shop_url, was_purchased, img_source
+		 FROM wish_items WHERE list_slug = $1 AND id = $2`, slug, id,
+	).Scan(&item.Id, &item.Name, &item.Title, &item.Description,
+		&item.ItemType, &item.ShopUrl, &item.WasPurchased, &item.ImgSource)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.WishItem{}, s.itemNotFound(ctx, slug, id)
+	}
+	if err != nil {
+		return domain.WishItem{}, fmt.Errorf("loading wish item %q from list %q: %w", id, slug, err)
+	}
+
+	return item, nil
+}
+
+// UpdateItem replaces an existing item's fields with a single targeted
+// UPDATE instead of SaveList's delete-and-reinsert-everything.
+func (s *PostgresStore) UpdateItem(slug string, item domain.WishItem) error {
+	ctx := context.Background()
+	cmd, err := s.pool.Exec(ctx,
+		`UPDATE wish_items
+		 SET name = $1, title = $2, description = $3, item_type = $4, shop_url = $5, was_purchased = $6, img_source = $7
+		 WHERE list_slug = $8 AND id = $9`,
+		item.Name, item.Title, item.Description, item.ItemType, item.ShopUrl, item.WasPurchased, item.ImgSource,
+		slug, item.Id,
+	)
+	if err != nil {
+		return fmt.Errorf("updating wish item %q in list %q: %w", item.Id, slug, err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return s.itemNotFound(ctx, slug, item.Id)
+	}
+	return nil
+}
+
+func (s *PostgresStore) DeleteItem(slug, id string) error {
+	ctx := context.Background()
+	cmd, err := s.pool.Exec(ctx, "DELETE FROM wish_items WHERE list_slug = $1 AND id = $2", slug, id)
+	if err != nil {
+		return fmt.Errorf("deleting wish item %q from list %q: %w", id, slug, err)
+	}
+	if cmd.RowsAffected() == 0 {
+		return s.itemNotFound(ctx, slug, id)
+	}
+	return nil
+}
+
+// PurchaseItem marks an item purchased and returns its new state in one
+// round trip via UPDATE ... RETURNING.
+func (s *PostgresStore) PurchaseItem(slug, id string) (domain.WishItem, error) {
+	ctx := context.Background()
+
+	var item domain.WishItem
+	err := s.pool.QueryRow(ctx,
+		`UPDATE wish_items SET was_purchased = TRUE
+		 WHERE list_slug = $1 AND id = $2
+		 RETURNING id, name, title, description, item_type, shop_url, was_purchased, img_source`,
+		slug, id,
+	).Scan(&item.Id, &item.Name, &item.Title, &item.Description,
+		&item.ItemType, &item.ShopUrl, &item.WasPurchased, &item.ImgSource)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.WishItem{}, s.itemNotFound(ctx, slug, id)
+	}
+	if err != nil {
+		return domain.WishItem{}, fmt.Errorf("marking wish item %q purchased in list %q: %w", id, slug, err)
+	}
+
+	return item, nil
+}
+
 // LoadAll loads every list's metadata then its items one list at a time.
 // N+1 queries, deliberately not optimized further: this only backs the
 // rarely-used full-export debug endpoint, and the list count here is tiny.

@@ -135,6 +135,119 @@ func (fs *FileStore) SaveList(slug string, w domain.Wishlist) error {
 	return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
 }
 
+// AddItem inserts a new item into slug's list, or replaces an existing item
+// with the same id in place (upsert), matching the create handler's
+// semantics without rewriting every other item in the list.
+func (fs *FileStore) AddItem(slug string, item domain.WishItem) error {
+	all, err := fs.readAll()
+	if err != nil {
+		return err
+	}
+
+	for i, l := range all.Lists {
+		if l.Slug != slug {
+			continue
+		}
+		wishlist := domain.Wishlist{Items: l.Items}
+		if wishlist.IndexOf(item) == -1 {
+			wishlist.AddItem(item)
+		} else if _, err := wishlist.UpdateItem(item); err != nil {
+			return err
+		}
+		all.Lists[i].Items = wishlist.Items
+		return fs.writeAll(all)
+	}
+
+	return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+}
+
+func (fs *FileStore) GetItem(slug, id string) (domain.WishItem, error) {
+	all, err := fs.readAll()
+	if err != nil {
+		return domain.WishItem{}, err
+	}
+
+	for _, l := range all.Lists {
+		if l.Slug != slug {
+			continue
+		}
+		wishlist := domain.Wishlist{Items: l.Items}
+		if index := wishlist.IndexOf(domain.WishItem{Id: id}); index != -1 {
+			return wishlist.Items[index], nil
+		}
+		return domain.WishItem{}, fmt.Errorf("item %q: %w", id, ErrItemNotFound)
+	}
+
+	return domain.WishItem{}, fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+}
+
+func (fs *FileStore) UpdateItem(slug string, item domain.WishItem) error {
+	all, err := fs.readAll()
+	if err != nil {
+		return err
+	}
+
+	for i, l := range all.Lists {
+		if l.Slug != slug {
+			continue
+		}
+		wishlist := domain.Wishlist{Items: l.Items}
+		if _, err := wishlist.UpdateItem(item); err != nil {
+			return fmt.Errorf("item %q: %w", item.Id, ErrItemNotFound)
+		}
+		all.Lists[i].Items = wishlist.Items
+		return fs.writeAll(all)
+	}
+
+	return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+}
+
+func (fs *FileStore) DeleteItem(slug, id string) error {
+	all, err := fs.readAll()
+	if err != nil {
+		return err
+	}
+
+	for i, l := range all.Lists {
+		if l.Slug != slug {
+			continue
+		}
+		wishlist := domain.Wishlist{Items: l.Items}
+		if !wishlist.RemoveItem(id) {
+			return fmt.Errorf("item %q: %w", id, ErrItemNotFound)
+		}
+		all.Lists[i].Items = wishlist.Items
+		return fs.writeAll(all)
+	}
+
+	return fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+}
+
+func (fs *FileStore) PurchaseItem(slug, id string) (domain.WishItem, error) {
+	all, err := fs.readAll()
+	if err != nil {
+		return domain.WishItem{}, err
+	}
+
+	for i, l := range all.Lists {
+		if l.Slug != slug {
+			continue
+		}
+		wishlist := domain.Wishlist{Items: l.Items}
+		item := wishlist.ItemPurchased(id)
+		if item == nil {
+			return domain.WishItem{}, fmt.Errorf("item %q: %w", id, ErrItemNotFound)
+		}
+		all.Lists[i].Items = wishlist.Items
+		if err := fs.writeAll(all); err != nil {
+			return domain.WishItem{}, err
+		}
+		return *item, nil
+	}
+
+	return domain.WishItem{}, fmt.Errorf("list %q: %w", slug, ErrListNotFound)
+}
+
 func (fs *FileStore) LoadAll() ([]domain.ListWithItems, error) {
 	all, err := fs.readAll()
 	if err != nil {
